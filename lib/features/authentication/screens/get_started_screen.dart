@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:thirikkale_driver/core/utils/app_styles.dart';
-import 'package:thirikkale_driver/features/home/screens/home_screen.dart';
+import 'package:thirikkale_driver/features/authentication/screens/mobile_registration_screen.dart';
 
 class GetStartedScreen extends StatelessWidget {
   const GetStartedScreen({super.key});
@@ -24,9 +24,9 @@ class GetStartedScreen extends StatelessWidget {
             ),
             const SizedBox(height: 5),
             Expanded(
-              flex: 3,
+              flex: 5,
               child: Lottie.asset(
-                'assets/lotties/driver_get_started.json',
+                'assets/lotties/driver_get_started_animation.json',
                 fit: BoxFit.contain,
                 repeat: true,
               ),
@@ -46,7 +46,7 @@ class GetStartedScreen extends StatelessWidget {
                 onPressed:
                     () => Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const HomeScreen()),
+                      MaterialPageRoute(builder: (context) => const MobileRegistrationScreen()),
                     ),
                 style: AppButtonStyles.primaryButton,
                 child: Text("Get Started"),
