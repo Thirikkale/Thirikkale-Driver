@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:thirikkale_driver/core/utils/navigation_utils.dart';
+import 'package:thirikkale_driver/features/authentication/screens/document_upload_screen.dart';
 import 'package:thirikkale_driver/features/authentication/widgets/sign_navigation_button_row.dart';
 import 'package:thirikkale_driver/widgets/common/custom_appbar.dart';
 import 'package:thirikkale_driver/widgets/common/custom_input_field_lable.dart';
@@ -37,16 +39,19 @@ class _NameRegistrationScreenState extends State<NameRegistrationScreen> {
     });
   }
 
-  void _navigateToPhotoVerification() {
+  void _navigateToDocumentUpload() {
     // Send details to backend also store the name in your AuthProvider here
     // final authProvider = Provider.of<AuthProvider>(context, listen: false);
     // authProvider.setUserName(_firstNameController.text, _lastNameController.text);
 
-    // Navigator.of(context).push(
-    //   NoAnimationPageRoute(
-    //     builder: (context) => const PhotoVerificationScreen(),
-    //   ),
-    // );
+    Navigator.of(context).push(
+      NoAnimationPageRoute(
+        builder:
+            (context) => DocumentUploadScreen(
+              firstName: _firstNameController.text.trim(),
+            ),
+      ),
+    );
   }
 
   @override
@@ -73,13 +78,19 @@ class _NameRegistrationScreenState extends State<NameRegistrationScreen> {
               style: Theme.of(context).textTheme.bodyLarge,
             ),
             const SizedBox(height: 14),
-            CustomInputFieldLabel(label: "First Name", controller: _firstNameController,),
+            CustomInputFieldLabel(
+              label: "First Name",
+              controller: _firstNameController,
+            ),
             const SizedBox(height: 16),
-            CustomInputFieldLabel(label: "Last Name", controller: _lastNameController,),
+            CustomInputFieldLabel(
+              label: "Last Name",
+              controller: _lastNameController,
+            ),
             const Spacer(),
             SignNavigationButtonRow(
               onBack: () => Navigator.pop(context),
-              onNext: _isFormValid ? _navigateToPhotoVerification : null,
+              onNext: _isFormValid ? _navigateToDocumentUpload : null,
               nextEnabled: _isFormValid,
             ),
             const SizedBox(height: 32),
