@@ -21,11 +21,11 @@ class ThirikkaleDriverApp extends StatelessWidget {
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
-        title: 'Thirikkale',
+        title: 'Thirikkale Driver',
         theme: AppTheme.lightTheme,
         // darkTheme: AppTheme.darkTheme,
         // themeMode: ThemeMode.system,
-        initialRoute: AppRoutes.nameReg,
+        initialRoute: AppRoutes.documentUpload,
         routes: AppRoutes.getRoutes(),
       ),
     );

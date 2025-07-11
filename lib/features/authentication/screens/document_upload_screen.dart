@@ -64,6 +64,15 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
     });
   }
 
+  void _markDocumentAsCompleted(String documentTitle) {
+    setState(() {
+      final index = _documents.indexWhere((doc) => doc.title == documentTitle);
+      if (index != -1) {
+        _documents[index].isCompleted = true;
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -118,6 +127,7 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
                     return DocumentListItem(
                       document: _documents[index],
                       onTap: () => _toggleDocumentStatus(index),
+                      onDocumentCompleted: _markDocumentAsCompleted,
                     );
                   },
                 ),

@@ -2,23 +2,58 @@ import 'package:flutter/material.dart';
 import 'package:thirikkale_driver/core/utils/app_dimensions.dart';
 import 'package:thirikkale_driver/core/utils/app_styles.dart';
 import 'package:thirikkale_driver/features/authentication/models/document_item_model.dart';
+import 'package:thirikkale_driver/features/authentication/screens/upload_screens/driving_license_screen.dart';
+import 'package:thirikkale_driver/features/authentication/screens/upload_screens/profile_picture_screen.dart';
 
 class DocumentListItem extends StatelessWidget {
   final DocumentItem document;
   final VoidCallback onTap;
+  final Function(String documentTitle) onDocumentCompleted;
 
   const DocumentListItem({
     super.key,
     required this.document,
     required this.onTap,
+    required this.onDocumentCompleted,
   });
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: onTap,
+      onTap: () async {
+        if (document.title == 'Profile Picture') {
+          // Navigate to profile picture screen
+          final result = await Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => const ProfilePictureScreen(),
+            ),
+          );
+
+          // If photo was successfully uploaded, mark as completed
+          if (result == true) {
+            onDocumentCompleted('Profile Picture');
+          }
+        } else if (document.title == 'Driving License') {
+          // Navigate to driving license screen
+          final result = await Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => const DrivingLicenseScreen(),
+            ),
+          );
+
+          // If photo was successfully uploaded, mark as completed
+          if (result == true) {
+            onDocumentCompleted('Driving License');
+          }
+        } else {
+          // For other documents, use the original toggle behavior
+          onTap();
+        }
+      },
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppDimensions.pageHorizontalPadding),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppDimensions.pageHorizontalPadding,
+        ),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
           decoration: const BoxDecoration(
@@ -32,13 +67,18 @@ class DocumentListItem extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(document.title, style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w600)),
+                  Text(
+                    document.title,
+                    style: AppTextStyles.bodyLarge.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   const SizedBox(height: 4),
                   Text(
                     document.subtitle,
                     style: AppTextStyles.bodyMedium.copyWith(
                       color: AppColors.primaryBlue,
-                      fontWeight: FontWeight.w500
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ],
