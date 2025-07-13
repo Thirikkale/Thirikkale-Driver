@@ -4,6 +4,7 @@ import 'package:thirikkale_driver/core/utils/app_styles.dart';
 import 'package:thirikkale_driver/features/authentication/models/document_item_model.dart';
 import 'package:thirikkale_driver/features/authentication/screens/upload_screens/driving_license_screen.dart';
 import 'package:thirikkale_driver/features/authentication/screens/upload_screens/profile_picture_screen.dart';
+import 'package:thirikkale_driver/features/authentication/screens/upload_screens/revenue_license_screen.dart';
 
 class DocumentListItem extends StatelessWidget {
   final DocumentItem document;
@@ -44,6 +45,18 @@ class DocumentListItem extends StatelessWidget {
           // If photo was successfully uploaded, mark as completed
           if (result == true) {
             onDocumentCompleted('Driving License');
+          }
+        } else if (document.title == 'Revenue License') {
+          // Navigate to revenue license screen
+          final result = await Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => const RevenueLicenseScreen(),
+            ),
+          );
+
+          // If photo was successfully uploaded, mark as completed
+          if (result == true) {
+            onDocumentCompleted('Revenue License');
           }
         } else {
           // For other documents, use the original toggle behavior

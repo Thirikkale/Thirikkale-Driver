@@ -21,7 +21,7 @@ class DrivingLicenseScreen extends StatelessWidget {
       ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(AppDimensions.pageHorizontalPadding),
+          padding: const EdgeInsets.symmetric(horizontal: AppDimensions.pageHorizontalPadding),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

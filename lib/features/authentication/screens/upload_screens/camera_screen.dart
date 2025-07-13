@@ -32,6 +32,8 @@ class _CameraScreenState extends State<CameraScreen> {
         return 'Take Profile Photo';
       case 'driving_license':
         return 'Take License Photo';
+      case 'revenue_license':
+        return 'Take Revenue License Photo';
       default:
         return 'Take Photo';
     }
@@ -43,6 +45,8 @@ class _CameraScreenState extends State<CameraScreen> {
         return 'Position your face in the center circle\nLook directly at the camera';
       case 'driving_license':
         return 'Place your license within the rectangle\nEnsure all text is clearly visible';
+      case 'revenue_license':
+        return 'Place your revenue license within the rectangle\nEnsure the document fits completely in the frame';
       default:
         return 'Position the document within the frame';
     }
@@ -211,6 +215,11 @@ class _CameraScreenState extends State<CameraScreen> {
                       child: CustomPaint(painter: DocumentGuidePainter()),
                     ),
 
+                  if (widget.documentType == 'revenue_license')
+                    Positioned.fill(
+                      child: CustomPaint(painter: RevenueLicenseGuidePainter()),
+                    ),
+
                   // Bottom controls
                   Positioned(
                     bottom: 50,
@@ -373,7 +382,7 @@ class PhotoPreviewDialog extends StatelessWidget {
   }
 }
 
-// Add this new painter for document guide
+// New Painter for document guide
 class DocumentGuidePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
@@ -447,6 +456,91 @@ class DocumentGuidePainter extends CustomPainter {
       Offset(rect.right, rect.bottom - bracketLength),
       bracketPaint,
     );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+// New painter for Revenue License guide
+// New painter for Revenue License guide (Square)
+class RevenueLicenseGuidePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint =
+        Paint()
+          ..color = Colors.white.withOpacity(0.3)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2;
+
+    // Make it a square guide
+    final squareSize = size.width * 0.65; // Square size
+
+    final rect = Rect.fromCenter(
+      center: Offset(size.width / 2, size.height / 2 - 100),
+      width: squareSize,
+      height: squareSize, // Same width and height for square
+    );
+
+    canvas.drawRect(rect, paint);
+
+    // Draw corner brackets
+    final bracketLength = 25.0; // Smaller brackets for smaller document
+    final bracketPaint =
+        Paint()
+          ..color = Colors.white
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3;
+
+    // Top-left corner
+    canvas.drawLine(
+      Offset(rect.left, rect.top),
+      Offset(rect.left + bracketLength, rect.top),
+      bracketPaint,
+    );
+    canvas.drawLine(
+      Offset(rect.left, rect.top),
+      Offset(rect.left, rect.top + bracketLength),
+      bracketPaint,
+    );
+
+    // Top-right corner
+    canvas.drawLine(
+      Offset(rect.right, rect.top),
+      Offset(rect.right - bracketLength, rect.top),
+      bracketPaint,
+    );
+    canvas.drawLine(
+      Offset(rect.right, rect.top),
+      Offset(rect.right, rect.top + bracketLength),
+      bracketPaint,
+    );
+
+    // Bottom-left corner
+    canvas.drawLine(
+      Offset(rect.left, rect.bottom),
+      Offset(rect.left + bracketLength, rect.bottom),
+      bracketPaint,
+    );
+    canvas.drawLine(
+      Offset(rect.left, rect.bottom),
+      Offset(rect.left, rect.bottom - bracketLength),
+      bracketPaint,
+    );
+
+    // Bottom-right corner
+    canvas.drawLine(
+      Offset(rect.right, rect.bottom),
+      Offset(rect.right - bracketLength, rect.bottom),
+      bracketPaint,
+    );
+    canvas.drawLine(
+      Offset(rect.right, rect.bottom),
+      Offset(rect.right, rect.bottom - bracketLength),
+      bracketPaint,
+    );
+
+    // Removed dimension labels section
   }
 
   @override

@@ -65,7 +65,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Size get preferredSize {
-    const defaultStatusBarHeight = 44.0;
+    const defaultStatusBarHeight = 20.0;
     return Size.fromHeight(toolbarHeight + defaultStatusBarHeight);
   }
 }
