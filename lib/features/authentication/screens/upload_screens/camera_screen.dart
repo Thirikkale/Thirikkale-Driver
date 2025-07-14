@@ -34,6 +34,8 @@ class _CameraScreenState extends State<CameraScreen> {
         return 'Take License Photo';
       case 'revenue_license':
         return 'Take Revenue License Photo';
+      case 'vehicle_insurance':
+        return 'Take Vehicle Insurance Photo';
       default:
         return 'Take Photo';
     }
@@ -47,6 +49,8 @@ class _CameraScreenState extends State<CameraScreen> {
         return 'Place your license within the rectangle\nEnsure all text is clearly visible';
       case 'revenue_license':
         return 'Place your revenue license within the rectangle\nEnsure the document fits completely in the frame';
+      case 'vehicle_insurance':
+        return 'Place your insurance certificate within the rectangle\nEnsure policy details are clearly visible';
       default:
         return 'Position the document within the frame';
     }
@@ -220,6 +224,10 @@ class _CameraScreenState extends State<CameraScreen> {
                       child: CustomPaint(painter: RevenueLicenseGuidePainter()),
                     ),
 
+                  if (widget.documentType == 'vehicle_insurance')
+                    Positioned.fill(
+                      child: CustomPaint(painter: DocumentGuidePainter()),
+                    ),
                   // Bottom controls
                   Positioned(
                     bottom: 50,
@@ -394,9 +402,9 @@ class DocumentGuidePainter extends CustomPainter {
 
     // Draw rectangle guide for documents
     final rect = Rect.fromCenter(
-      center: Offset(size.width / 2, size.height / 2),
-      width: size.width * 0.8,
-      height: size.height * 0.5,
+      center: Offset(size.width / 2, size.height / 2 - 60),
+      width: size.width * 0.7,
+      height: size.height * 0.52,
     );
 
     canvas.drawRect(rect, paint);

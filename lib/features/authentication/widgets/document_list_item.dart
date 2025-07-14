@@ -5,6 +5,7 @@ import 'package:thirikkale_driver/features/authentication/models/document_item_m
 import 'package:thirikkale_driver/features/authentication/screens/upload_screens/driving_license_screen.dart';
 import 'package:thirikkale_driver/features/authentication/screens/upload_screens/profile_picture_screen.dart';
 import 'package:thirikkale_driver/features/authentication/screens/upload_screens/revenue_license_screen.dart';
+import 'package:thirikkale_driver/features/authentication/screens/upload_screens/vehicle_insurance_screen.dart';
 
 class DocumentListItem extends StatelessWidget {
   final DocumentItem document;
@@ -57,6 +58,16 @@ class DocumentListItem extends StatelessWidget {
           // If photo was successfully uploaded, mark as completed
           if (result == true) {
             onDocumentCompleted('Revenue License');
+          }
+        } else if (document.title == 'Vehicle Insurance') {
+          final result = await Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => const VehicleInsuranceScreen(),
+            ),
+          );
+
+          if (result == true) {
+            onDocumentCompleted('Vehicle Insurance');
           }
         } else {
           // For other documents, use the original toggle behavior
