@@ -6,6 +6,7 @@ import 'package:thirikkale_driver/features/authentication/screens/upload_screens
 import 'package:thirikkale_driver/features/authentication/screens/upload_screens/profile_picture_screen.dart';
 import 'package:thirikkale_driver/features/authentication/screens/upload_screens/revenue_license_screen.dart';
 import 'package:thirikkale_driver/features/authentication/screens/upload_screens/vehicle_insurance_screen.dart';
+import 'package:thirikkale_driver/features/authentication/screens/upload_screens/vehicle_registration_screen.dart';
 
 class DocumentListItem extends StatelessWidget {
   final DocumentItem document;
@@ -68,6 +69,17 @@ class DocumentListItem extends StatelessWidget {
 
           if (result == true) {
             onDocumentCompleted('Vehicle Insurance');
+          }
+        } else if (document.title == 'Vehicle Registration') {
+          // Navigate to vehicle registration screen
+          final result = await Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => const VehicleRegistrationScreen(),
+            ),
+          );
+
+          if (result == true) {
+            onDocumentCompleted('Vehicle Registration');
           }
         } else {
           // For other documents, use the original toggle behavior

@@ -35,7 +35,9 @@ class _CameraScreenState extends State<CameraScreen> {
       case 'revenue_license':
         return 'Take Revenue License Photo';
       case 'vehicle_insurance':
-        return 'Take Vehicle Insurance Photo';
+        return 'Take Insurance Photo';
+      case 'vehicle_registration':
+        return 'Take Registration Photo';
       default:
         return 'Take Photo';
     }
@@ -51,6 +53,8 @@ class _CameraScreenState extends State<CameraScreen> {
         return 'Place your revenue license within the rectangle\nEnsure the document fits completely in the frame';
       case 'vehicle_insurance':
         return 'Place your insurance certificate within the rectangle\nEnsure policy details are clearly visible';
+      case 'vehicle_registration':
+        return 'Place your registration document within the rectangle\nEnsure all vehicle details are clearly visible';
       default:
         return 'Position the document within the frame';
     }
@@ -227,6 +231,12 @@ class _CameraScreenState extends State<CameraScreen> {
                   if (widget.documentType == 'vehicle_insurance')
                     Positioned.fill(
                       child: CustomPaint(painter: DocumentGuidePainter()),
+                    ),
+
+                  if (widget.documentType == 'vehicle_registration')
+                    Positioned.fill(
+                      child: CustomPaint(
+                        painter: VehicleRegistrationDocPainter()),
                     ),
                   // Bottom controls
                   Positioned(
@@ -549,6 +559,115 @@ class RevenueLicenseGuidePainter extends CustomPainter {
     );
 
     // Removed dimension labels section
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+// Add this new painter class for A4 documents
+class VehicleRegistrationDocPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint =
+        Paint()
+          ..color = Colors.white.withOpacity(0.3)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2;
+
+    // A4 aspect ratio is 1:1.414 (width:height)
+    final aspectRatio = 1 / 1.414; // 0.707
+    final rectWidth = size.width * 0.75; // Larger width for A4
+    final rectHeight =
+        rectWidth / aspectRatio; // Calculate height based on A4 ratio
+
+    // Ensure the rectangle fits within the screen
+    final maxHeight = size.height * 0.7;
+    final finalHeight = rectHeight > maxHeight ? maxHeight : rectHeight;
+    final finalWidth = finalHeight * aspectRatio;
+
+    final rect = Rect.fromCenter(
+      center: Offset(size.width / 2, size.height / 2 - 50),
+      width: finalWidth,
+      height: finalHeight,
+    );
+
+    canvas.drawRect(rect, paint);
+
+    // Draw corner brackets
+    final bracketLength = 35.0; // Larger brackets for A4 document
+    final bracketPaint =
+        Paint()
+          ..color = Colors.white
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3;
+
+    // Top-left corner
+    canvas.drawLine(
+      Offset(rect.left, rect.top),
+      Offset(rect.left + bracketLength, rect.top),
+      bracketPaint,
+    );
+    canvas.drawLine(
+      Offset(rect.left, rect.top),
+      Offset(rect.left, rect.top + bracketLength),
+      bracketPaint,
+    );
+
+    // Top-right corner
+    canvas.drawLine(
+      Offset(rect.right, rect.top),
+      Offset(rect.right - bracketLength, rect.top),
+      bracketPaint,
+    );
+    canvas.drawLine(
+      Offset(rect.right, rect.top),
+      Offset(rect.right, rect.top + bracketLength),
+      bracketPaint,
+    );
+
+    // Bottom-left corner
+    canvas.drawLine(
+      Offset(rect.left, rect.bottom),
+      Offset(rect.left + bracketLength, rect.bottom),
+      bracketPaint,
+    );
+    canvas.drawLine(
+      Offset(rect.left, rect.bottom),
+      Offset(rect.left, rect.bottom - bracketLength),
+      bracketPaint,
+    );
+
+    // Bottom-right corner
+    canvas.drawLine(
+      Offset(rect.right, rect.bottom),
+      Offset(rect.right - bracketLength, rect.bottom),
+      bracketPaint,
+    );
+    canvas.drawLine(
+      Offset(rect.right, rect.bottom),
+      Offset(rect.right, rect.bottom - bracketLength),
+      bracketPaint,
+    );
+
+    // // Add A4 size label
+    // final textPainter = TextPainter(
+    //   text: const TextSpan(
+    //     text: 'A4 Size',
+    //     style: TextStyle(
+    //       color: Colors.white,
+    //       fontSize: 12,
+    //       fontWeight: FontWeight.w500,
+    //     ),
+    //   ),
+    //   textDirection: TextDirection.ltr,
+    // );
+
+    // textPainter.layout();
+    // textPainter.paint(
+    //   canvas,
+    //   Offset(rect.center.dx - textPainter.width / 2, rect.bottom + 10),
+    // );
   }
 
   @override

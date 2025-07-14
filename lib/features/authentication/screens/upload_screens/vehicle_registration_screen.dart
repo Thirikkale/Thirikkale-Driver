@@ -7,8 +7,8 @@ import 'package:thirikkale_driver/features/authentication/widgets/upload_screen_
 import 'package:thirikkale_driver/features/authentication/widgets/upload_screen_widgets/guidelines_widget.dart';
 import 'package:thirikkale_driver/widgets/common/custom_appbar.dart';
 
-class VehicleInsuranceScreen extends StatelessWidget {
-  const VehicleInsuranceScreen({super.key});
+class VehicleRegistrationScreen extends StatelessWidget {
+  const VehicleRegistrationScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -28,45 +28,48 @@ class VehicleInsuranceScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 24),
-              Text('Upload Vehicle Insurance', style: AppTextStyles.heading1),
+              Text(
+                'Upload Vehicle Registration',
+                style: AppTextStyles.heading1,
+              ),
               const SizedBox(height: 24),
               Text(
-                'Why do we need your vehicle insurance?',
+                'Why do we need your vehicle registration?',
                 style: AppTextStyles.heading2,
               ),
               const SizedBox(height: 16),
               const BuildReasonItem(
-                icon: Icons.security,
-                title: 'Safety protection',
+                icon: Icons.assignment,
+                title: 'Vehicle ownership verification',
                 description:
-                    'Insurance protects you, your passengers, and other road users in case of accidents.',
+                    'Confirms you are the legal owner or authorized user of the vehicle.',
               ),
               const SizedBox(height: 16),
               const BuildReasonItem(
-                icon: Icons.gavel,
-                title: 'Legal requirement',
+                icon: Icons.verified,
+                title: 'Legal compliance',
                 description:
-                    'Valid vehicle insurance is mandatory by law for all commercial vehicles.',
+                    'Vehicle registration is required by law for all vehicles operating commercially.',
               ),
               const SizedBox(height: 16),
               const BuildReasonItem(
-                icon: Icons.verified_user,
-                title: 'Platform compliance',
+                icon: Icons.settings,
+                title: 'Vehicle details matching',
                 description:
-                    'Insurance verification is required to activate your driver account and start earning.',
+                    'Ensures vehicle specifications match your selected service type.',
               ),
               const SizedBox(height: 32),
               const GuidelinesWidget(
                 title: 'Photo Guidelines',
                 icon: Icons.camera_alt_outlined,
                 guidelines: [
-                  '• Take a clear photo of your insurance certificate',
-                  '• Ensure the policy is current and not expired',
-                  '• All text, including policy number, must be readable',
-                  '• Verify vehicle details match your registration',
+                  '• Take a clear photo of your vehicle registration certificate',
+                  '• Ensure the document is current and not expired',
+                  '• All vehicle details must be clearly readable',
+                  '• Vehicle number, owner name, and model should be visible',
                   '• Good lighting with no shadows or reflections',
-                  '• Place document on a flat, contrasting surface',
-                  '• Capture the entire certificate within the frame',
+                  '• Place document flat on a contrasting surface',
+                  '• Capture the entire document within the frame',
                 ],
               ),
               const SizedBox(height: 48),
@@ -79,7 +82,7 @@ class VehicleInsuranceScreen extends StatelessWidget {
                       NoAnimationPageRoute(
                         builder:
                             (context) => const CameraScreen(
-                              documentType: 'vehicle_insurance',
+                              documentType: 'vehicle_registration',
                             ),
                       ),
                     );
