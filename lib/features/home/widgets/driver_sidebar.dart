@@ -19,45 +19,79 @@ class DriverSidebar extends StatelessWidget {
               left: AppDimensions.pageHorizontalPadding,
               right: AppDimensions.pageHorizontalPadding,
             ),
-            decoration: const BoxDecoration(
-              color: AppColors.primaryBlue,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            decoration: const BoxDecoration(color: AppColors.primaryBlue),
+            child: Stack(
               children: [
-                const CircleAvatar(
-                  radius: 30,
-                  backgroundColor: AppColors.white,
-                  child: Icon(
-                    Icons.person,
-                    size: 36,
-                    color: AppColors.primaryBlue,
-                  ),
+                Row(
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const CircleAvatar(
+                          radius: 30,
+                          backgroundColor: AppColors.white,
+                          child: Icon(
+                            Icons.person,
+                            size: 36,
+                            color: AppColors.primaryBlue,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Olivia Bennet',
+                          style: AppTextStyles.heading2.copyWith(
+                            color: AppColors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        
+                        Row(
+                          children: [
+                            Icon(Icons.star, color: AppColors.white,),
+                            SizedBox(width: 2.5,),
+                            Text(
+                              '5.00',
+                              style: AppTextStyles.bodyLarge.copyWith(
+                                color: AppColors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                Text(
-                  'Olivia Bennet',
-                  style: AppTextStyles.heading3.copyWith(color: AppColors.white),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Driver ID: DR001234',
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.white.withOpacity(0.8),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.success,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    'Verified',
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.white,
-                      fontWeight: FontWeight.w600,
+                // Verified Badge in top right
+                Positioned(
+                  top: 0,
+                  right: 0,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.success,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.verified,
+                          color: AppColors.white,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Verified',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -159,17 +193,13 @@ class DriverSidebar extends StatelessWidget {
     Color? textColor,
   }) {
     return ListTile(
-      leading: Icon(
-        icon,
-        color: textColor ?? AppColors.textPrimary,
-        size: 30,
-      ),
+      leading: Icon(icon, color: textColor ?? AppColors.textPrimary, size: 30),
       title: Text(
         title,
         style: AppTextStyles.bodyLarge.copyWith(
           color: textColor ?? AppColors.textPrimary,
           fontWeight: FontWeight.w600,
-          fontSize: 18
+          fontSize: 18,
         ),
       ),
       onTap: onTap,
@@ -216,18 +246,19 @@ class DriverSidebar extends StatelessWidget {
     Navigator.pop(context);
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('About Thirikkale Driver'),
-        content: const Text(
-          'Thirikkale Driver app helps you connect with passengers and earn money by providing safe and reliable transportation services.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('About Thirikkale Driver'),
+            content: const Text(
+              'Thirikkale Driver app helps you connect with passengers and earn money by providing safe and reliable transportation services.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 
@@ -235,27 +266,25 @@ class DriverSidebar extends StatelessWidget {
     Navigator.pop(context);
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Logout'),
+            content: const Text('Are you sure you want to logout?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  // Perform logout
+                  print('Logout');
+                },
+                child: Text('Logout', style: TextStyle(color: AppColors.error)),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // Perform logout
-              print('Logout');
-            },
-            child: Text(
-              'Logout',
-              style: TextStyle(color: AppColors.error),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
