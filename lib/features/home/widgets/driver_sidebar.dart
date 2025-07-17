@@ -91,6 +91,11 @@ class DriverSidebar extends StatelessWidget {
                   onTap: () => _navigateToVehicleDetails(context),
                 ),
                 _buildMenuItem(
+                  icon: Icons.list_alt_outlined,
+                  title: 'Documents',
+                  onTap: () => _navigateToVehicleDetails(context),
+                ),
+                _buildMenuItem(
                   icon: Icons.star,
                   title: 'Ratings & Reviews',
                   onTap: () => _navigateToRatings(context),
