@@ -58,24 +58,18 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       context,
       listen: false,
     );
+    await locationProvider.getCurrentLocation();
 
-    try {
-      // Get initial location
-      await locationProvider.getCurrentLocation();
+    if (!mounted) return;
 
-      if (locationProvider.currentLocation != null && mounted) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _updateCurrentLocationMarker();
-          _animateToCurrentLocation();
-        });
-
-        // Start watching location changes
-        _startLocationTracking();
-      }
-    } catch (e) {
-      if (mounted) {
-        _showLocationPermissionDialog();
-      }
+    if (locationProvider.locationError != null) {
+      // If there's an error, show the permission dialog.
+      _showLocationPermissionDialog();
+    } else if (locationProvider.currentLocation != null) {
+      // If successful, proceed with updating the map.
+      _updateCurrentLocationMarker();
+      _animateToCurrentLocation();
+      _startLocationTracking();
     }
   }
 
@@ -225,7 +219,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
               TextButton(
                 onPressed: () async {
                   Navigator.pop(context);
-                  await LocationService.openAppSettings();
+                  await LocationService.openLocationSettings();
                 },
                 child: const Text('Settings'),
               ),
