@@ -190,13 +190,17 @@ class _LocationSearchWidgetState extends State<LocationSearchWidget> {
           focusNode: _focusNode,
           decoration: InputDecoration(
             hintText: 'Search for a place...',
+            hintStyle: TextStyle(fontWeight: FontWeight.w600),
             prefixIcon: const Icon(
               Icons.search,
               color: AppColors.textSecondary,
             ),
             border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
+            disabledBorder: InputBorder.none,
             contentPadding: const EdgeInsets.symmetric(
-              vertical: 15,
+              vertical: 13,
               horizontal: 20,
             ),
             suffixIcon:
