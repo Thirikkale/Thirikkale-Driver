@@ -1,12 +1,16 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:thirikkale_driver/config/env_config.dart';
 import 'package:thirikkale_driver/config/routes.dart';
 import 'package:thirikkale_driver/core/provider/auth_provider.dart';
+import 'package:thirikkale_driver/core/provider/driver_provider.dart';
+import 'package:thirikkale_driver/core/provider/location_provider.dart';
 import 'package:thirikkale_driver/core/utils/app_theme.dart';
 
 void main() async {    
   WidgetsFlutterBinding.ensureInitialized();
+  await EnvConfig.loadEnv();
   await Firebase.initializeApp();
   runApp(const ThirikkaleDriverApp());
 }
@@ -17,7 +21,9 @@ class ThirikkaleDriverApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => AuthProvider())
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => LocationProvider()),
+        ChangeNotifierProvider(create: (_) => DriverProvider()),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
@@ -25,7 +31,7 @@ class ThirikkaleDriverApp extends StatelessWidget {
         theme: AppTheme.lightTheme,
         // darkTheme: AppTheme.darkTheme,
         // themeMode: ThemeMode.system,
-        initialRoute: AppRoutes.documentUpload,
+        initialRoute: AppRoutes.driverHome,
         routes: AppRoutes.getRoutes(),
       ),
     );

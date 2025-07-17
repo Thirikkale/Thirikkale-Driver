@@ -2,8 +2,16 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 	<dict>
+		<!-- Google Maps API Key -->
+        <key>GOOGLE_MAPS_API_KEY</key>
+        <string>AIzaSyAdoB5toIOn7izL2sUcGhbUiqjVnxl8N1g</string>
+
 		<key>NSCameraUsageDescription</key>
 		<string>This app needs access to camera to take profile pictures</string>
+		<key>NSLocationWhenInUseUsageDescription</key>
+		<string>This app needs access to location to show your current position on the map</string>
+		<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+		<string>This app needs access to location to provide navigation and driver services</string>
 		<key>CFBundleDevelopmentRegion</key>
 		<string>$(DEVELOPMENT_LANGUAGE)</string>
 		<key>CFBundleDisplayName</key>
