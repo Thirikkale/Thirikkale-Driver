@@ -4,6 +4,8 @@ import 'package:thirikkale_driver/features/authentication/screens/get_started_sc
 import 'package:thirikkale_driver/features/authentication/screens/name_registration_screen.dart';
 import 'package:thirikkale_driver/features/home/screens/home_screen.dart';
 import 'package:thirikkale_driver/features/home/screens/driver_home_screen.dart';
+import 'package:thirikkale_driver/features/home/screens/drive_pass_screen.dart';
+import 'package:thirikkale_driver/features/home/screens/drive_pass_history_screen.dart';
 
 class AppRoutes {
   static const String initial = '/';
@@ -11,6 +13,8 @@ class AppRoutes {
   static const String driverHome = '/driver-home';
   static const String nameReg = '/name-registration';
   static const String documentUpload = '/document-upload';
+  static const String drivePass = '/drive-pass';
+  static const String drivePassHistory = '/drive-pass-history';
 
   static Map<String, WidgetBuilder> getRoutes() {
     return {
@@ -18,7 +22,10 @@ class AppRoutes {
       home: (context) => const HomeScreen(),
       driverHome: (context) => const DriverHomeScreen(),
       nameReg: (context) => const NameRegistrationScreen(),
-      documentUpload: (context) => const DocumentUploadScreen(firstName: "Nikila")
+      documentUpload:
+          (context) => const DocumentUploadScreen(firstName: "Nikila"),
+      drivePass: (context) => const DrivePassScreen(),
+      drivePassHistory: (context) => const DrivePassHistoryScreen(),
     };
   }
 }

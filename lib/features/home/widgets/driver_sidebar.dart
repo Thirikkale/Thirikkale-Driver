@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:thirikkale_driver/core/utils/app_dimensions.dart';
 import 'package:thirikkale_driver/core/utils/app_styles.dart';
+import 'package:thirikkale_driver/features/home/screens/drive_pass_screen.dart';
 
 class DriverSidebar extends StatelessWidget {
   const DriverSidebar({super.key});
@@ -19,9 +20,7 @@ class DriverSidebar extends StatelessWidget {
               left: AppDimensions.pageHorizontalPadding,
               right: AppDimensions.pageHorizontalPadding,
             ),
-            decoration: const BoxDecoration(
-              color: AppColors.primaryBlue,
-            ),
+            decoration: const BoxDecoration(color: AppColors.primaryBlue),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -37,7 +36,9 @@ class DriverSidebar extends StatelessWidget {
                 const SizedBox(height: 16),
                 Text(
                   'Olivia Bennet',
-                  style: AppTextStyles.heading3.copyWith(color: AppColors.white),
+                  style: AppTextStyles.heading3.copyWith(
+                    color: AppColors.white,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -48,7 +49,10 @@ class DriverSidebar extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.success,
                     borderRadius: BorderRadius.circular(12),
@@ -73,7 +77,10 @@ class DriverSidebar extends StatelessWidget {
                 _buildMenuItem(
                   icon: Icons.verified_sharp,
                   title: 'Drive Pass',
-                  onTap: () => Navigator.pop(context),
+                  onTap: () {
+                    print('Drive Pass menu item tapped!');
+                    _navigateToDrivePass(context);
+                  },
                 ),
                 _buildMenuItem(
                   icon: Icons.history,
@@ -159,17 +166,13 @@ class DriverSidebar extends StatelessWidget {
     Color? textColor,
   }) {
     return ListTile(
-      leading: Icon(
-        icon,
-        color: textColor ?? AppColors.textPrimary,
-        size: 30,
-      ),
+      leading: Icon(icon, color: textColor ?? AppColors.textPrimary, size: 30),
       title: Text(
         title,
         style: AppTextStyles.bodyLarge.copyWith(
           color: textColor ?? AppColors.textPrimary,
           fontWeight: FontWeight.w600,
-          fontSize: 18
+          fontSize: 18,
         ),
       ),
       onTap: onTap,
@@ -180,6 +183,33 @@ class DriverSidebar extends StatelessWidget {
     Navigator.pop(context);
     // Navigate to trip history screen
     print('Navigate to Trip History');
+  }
+
+  void _navigateToDrivePass(BuildContext context) {
+    print('_navigateToDrivePass method called');
+    Navigator.pop(context);
+    print('Drawer closed');
+
+    // Add a small delay to ensure drawer is fully closed
+    Future.delayed(const Duration(milliseconds: 200), () {
+      print('About to navigate to DrivePassScreen');
+      try {
+        // Try named route first
+        Navigator.pushNamed(context, '/drive-pass');
+        print('Named route navigation successful');
+      } catch (e) {
+        print('Named route failed: $e, trying direct navigation');
+        try {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const DrivePassScreen()),
+          );
+          print('Direct navigation successful');
+        } catch (e2) {
+          print('Direct navigation also failed: $e2');
+        }
+      }
+    });
   }
 
   void _navigateToEarnings(BuildContext context) {
@@ -216,18 +246,19 @@ class DriverSidebar extends StatelessWidget {
     Navigator.pop(context);
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('About Thirikkale Driver'),
-        content: const Text(
-          'Thirikkale Driver app helps you connect with passengers and earn money by providing safe and reliable transportation services.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('About Thirikkale Driver'),
+            content: const Text(
+              'Thirikkale Driver app helps you connect with passengers and earn money by providing safe and reliable transportation services.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 
@@ -235,27 +266,25 @@ class DriverSidebar extends StatelessWidget {
     Navigator.pop(context);
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Logout'),
+            content: const Text('Are you sure you want to logout?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  // Perform logout
+                  print('Logout');
+                },
+                child: Text('Logout', style: TextStyle(color: AppColors.error)),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // Perform logout
-              print('Logout');
-            },
-            child: Text(
-              'Logout',
-              style: TextStyle(color: AppColors.error),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
