@@ -29,6 +29,7 @@ class _LocationSearchWidgetState extends State<LocationSearchWidget> {
   List<Map<String, dynamic>> _predictions = [];
   bool _isSearching = false;
   String? _sessionToken;
+  bool _isSettingText = false;
 
   @override
   void initState() {
@@ -54,10 +55,17 @@ class _LocationSearchWidgetState extends State<LocationSearchWidget> {
     }
     if (!_focusNode.hasFocus) {
       _removeOverlay();
+
+      // Clear predictions when focus is lost
+      setState(() {
+        _predictions.clear();
+      });
     }
   }
 
   void _onSearchChanged() {
+    if (_isSettingText) return;
+
     _debounceTimer?.cancel();
     _debounceTimer = Timer(const Duration(milliseconds: 300), () {
       if (_searchController.text.trim().length > 2) {
@@ -145,6 +153,7 @@ class _LocationSearchWidgetState extends State<LocationSearchWidget> {
   Future<void> _onPredictionTapped(Map<String, dynamic> prediction) async {
     final placeId = prediction['place_id'] as String?;
     if (placeId == null) return;
+
     _focusNode.unfocus();
     _removeOverlay();
 
@@ -160,8 +169,17 @@ class _LocationSearchWidgetState extends State<LocationSearchWidget> {
             details['name'] ?? prediction['description'] ?? 'Unknown Place';
         if (lat != null && lng != null) {
           widget.onLocationSelected(name, LatLng(lat, lng));
+
+          _isSettingText = true;
           _searchController.text = name;
+          _isSettingText = false;
+
           _sessionToken = null;
+
+          // Ensure overlay doesnot show
+          setState(() {
+            _predictions.clear();
+          });
         }
       }
     } catch (e) {
