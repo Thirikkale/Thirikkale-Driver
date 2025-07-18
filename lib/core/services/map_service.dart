@@ -198,4 +198,121 @@ class MapService {
       CameraUpdate.newLatLngBounds(bounds, padding),
     );
   }
+
+  /// Create route from driver to pickup location
+  static Future<Polyline?> createDriverToPickupRoute(
+    LatLng driverLocation,
+    LatLng pickupLocation,
+  ) async {
+    try {
+      final directions = await getDirections(driverLocation, pickupLocation);
+      if (directions != null && directions['routes'].isNotEmpty) {
+        final route = directions['routes'][0];
+        final polylinePoints = route['overview_polyline']['points'];
+
+        final List<LatLng> decodedPoints = _decodePolyline(polylinePoints);
+
+        return Polyline(
+          polylineId: const PolylineId('driver_to_pickup'),
+          points: decodedPoints,
+          color: AppColors.primaryBlue,
+          width: 5,
+          patterns: [],
+        );
+      }
+    } catch (e) {
+      print('Error creating driver to pickup route: $e');
+    }
+    return null;
+  }
+
+  /// Create route from pickup to destination
+  static Future<Polyline?> createPickupToDestinationRoute(
+    LatLng pickupLocation,
+    LatLng destinationLocation,
+  ) async {
+    try {
+      final directions = await getDirections(
+        pickupLocation,
+        destinationLocation,
+      );
+      if (directions != null && directions['routes'].isNotEmpty) {
+        final route = directions['routes'][0];
+        final polylinePoints = route['overview_polyline']['points'];
+
+        final List<LatLng> decodedPoints = _decodePolyline(polylinePoints);
+
+        return Polyline(
+          polylineId: const PolylineId('pickup_to_destination'),
+          points: decodedPoints,
+          color: AppColors.success,
+          width: 4,
+          patterns: [PatternItem.dash(10), PatternItem.gap(5)],
+        );
+      }
+    } catch (e) {
+      print('Error creating pickup to destination route: $e');
+    }
+    return null;
+  }
+
+  /// Create marker for pickup location
+  static Marker createPickupMarker(LatLng position, String address) {
+    return Marker(
+      markerId: const MarkerId('pickup_location'),
+      position: position,
+      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+      infoWindow: InfoWindow(title: 'Pickup Location', snippet: address),
+    );
+  }
+
+  /// Create marker for drop location
+  static Marker createDropMarker(LatLng position, String address) {
+    return Marker(
+      markerId: const MarkerId('drop_location'),
+      position: position,
+      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+      infoWindow: InfoWindow(title: 'Drop Location', snippet: address),
+    );
+  }
+
+  /// Calculate bounds for all ride locations
+  static LatLngBounds calculateRideBounds(
+    LatLng driverLocation,
+    LatLng pickupLocation,
+    LatLng destinationLocation,
+  ) {
+    double minLat = [
+      driverLocation.latitude,
+      pickupLocation.latitude,
+      destinationLocation.latitude,
+    ].reduce((a, b) => a < b ? a : b);
+    double maxLat = [
+      driverLocation.latitude,
+      pickupLocation.latitude,
+      destinationLocation.latitude,
+    ].reduce((a, b) => a > b ? a : b);
+    double minLng = [
+      driverLocation.longitude,
+      pickupLocation.longitude,
+      destinationLocation.longitude,
+    ].reduce((a, b) => a < b ? a : b);
+    double maxLng = [
+      driverLocation.longitude,
+      pickupLocation.longitude,
+      destinationLocation.longitude,
+    ].reduce((a, b) => a > b ? a : b);
+
+    // Add padding
+    const double padding = 0.01;
+    minLat -= padding;
+    maxLat += padding;
+    minLng -= padding;
+    maxLng += padding;
+
+    return LatLngBounds(
+      southwest: LatLng(minLat, minLng),
+      northeast: LatLng(maxLat, maxLng),
+    );
+  }
 }

@@ -5,8 +5,10 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:thirikkale_driver/core/provider/location_provider.dart';
 import 'package:thirikkale_driver/core/provider/driver_provider.dart';
+import 'package:thirikkale_driver/core/provider/ride_provider.dart';
 import 'package:thirikkale_driver/core/services/location_service.dart';
 import 'package:thirikkale_driver/core/services/map_service.dart';
+import 'package:thirikkale_driver/core/services/ride_request_service.dart';
 import 'package:thirikkale_driver/core/utils/app_dimensions.dart';
 import 'package:thirikkale_driver/core/utils/app_styles.dart';
 import 'package:thirikkale_driver/core/utils/navigation_utils.dart';
@@ -14,9 +16,11 @@ import 'package:thirikkale_driver/core/utils/snackbar_helper.dart';
 import 'package:thirikkale_driver/features/home/widgets/driver_sidebar.dart';
 import 'package:thirikkale_driver/features/home/widgets/location_error.dart';
 import 'package:thirikkale_driver/features/home/widgets/location_search_widget.dart';
+import 'package:thirikkale_driver/features/home/widgets/ride_action_buttons.dart';
 // import 'package:thirikkale_driver/features/home/widgets/driver_status_widget.dart';
 // import 'package:thirikkale_driver/features/home/widgets/earnings_bottom_sheet.dart';
 import 'package:thirikkale_driver/features/home/widgets/sliding_go_button.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class DriverHomeScreen extends StatefulWidget {
   const DriverHomeScreen({super.key});
@@ -290,13 +294,119 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     return _getDefaultLocation();
   }
 
+  // Create ride routes
+  void _createRideRoutes() async {
+    final locationProvider = Provider.of<LocationProvider>(
+      context,
+      listen: false,
+    );
+    final rideProvider = Provider.of<RideProvider>(context, listen: false);
+
+    final currentLocation = locationProvider.currentLocation;
+    final rideRequest = rideProvider.currentRideRequest;
+
+    if (currentLocation != null && rideRequest != null) {
+      final driverLocation = LatLng(
+        currentLocation['latitude'],
+        currentLocation['longitude'],
+      );
+
+      // Clear existing markers and polylines
+      setState(() {
+        _markers.clear();
+        _polylines.clear();
+      });
+
+      // Add driver marker
+      _markers.add(MapService.createCurrentLocationMarker(driverLocation));
+
+      // Add pickup marker
+      _markers.add(
+        MapService.createPickupMarker(
+          rideRequest.pickupLocation,
+          rideRequest.pickupAddress,
+        ),
+      );
+
+      // Add destination marker
+      _markers.add(
+        MapService.createDropMarker(
+          rideRequest.destinationLocation,
+          rideRequest.destinationAddress,
+        ),
+      );
+
+      // Create route from driver to pickup
+      final driverToPickupRoute = await MapService.createDriverToPickupRoute(
+        driverLocation,
+        rideRequest.pickupLocation,
+      );
+
+      // Create route from pickup to destination
+      final pickupToDestinationRoute =
+          await MapService.createPickupToDestinationRoute(
+            rideRequest.pickupLocation,
+            rideRequest.destinationLocation,
+          );
+
+      if (mounted) {
+        setState(() {
+          if (driverToPickupRoute != null) {
+            _polylines.add(driverToPickupRoute);
+          }
+          if (pickupToDestinationRoute != null) {
+            _polylines.add(pickupToDestinationRoute);
+          }
+        });
+
+        // Animate to show all locations
+        if (_mapController != null && _isMapReady) {
+          final bounds = MapService.calculateRideBounds(
+            driverLocation,
+            rideRequest.pickupLocation,
+            rideRequest.destinationLocation,
+          );
+          MapService.animateToBounds(_mapController!, bounds, padding: 150);
+        }
+      }
+    }
+  }
+
+  // Rider pickup
+  void _navigateToPickup() async {
+    final rideProvider = Provider.of<RideProvider>(context, listen: false);
+    final rideRequest = rideProvider.currentRideRequest;
+
+    if (rideRequest != null) {
+      final url =
+          'google.navigation:q=${rideRequest.pickupLat},${rideRequest.pickupLng}';
+      final uri = Uri.parse(url);
+
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri);
+        rideProvider.startNavigation();
+      }
+    }
+  }
+
+   void _showTestRideRequest() {
+    final rideRequest = RideRequestService().generateDummyRideRequest();
+    RideRequestService().showRideRequest(context, rideRequest);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       key: _scaffoldKey,
       drawer: const DriverSidebar(),
-      body: Consumer2<LocationProvider, DriverProvider>(
-        builder: (context, locationProvider, driverProvider, child) {
+      body: Consumer3<LocationProvider, DriverProvider, RideProvider>(
+        builder: (
+          context,
+          locationProvider,
+          driverProvider,
+          rideProvider,
+          child,
+        ) {
           final currentLocationMap = locationProvider.currentLocation;
           final LatLng? currentUserPosition =
               currentLocationMap != null
@@ -305,6 +415,14 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                     currentLocationMap['longitude'],
                   )
                   : null;
+
+          // Listen to ride provider changes
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (rideProvider.isRideAccepted) {
+              _createRideRoutes();
+            }
+          });
+
           return Stack(
             children: [
               // Google Map
@@ -409,6 +527,42 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                   ),
                 ),
               ),
+
+              // Test button (remove in production)
+              Positioned(
+                top: MediaQuery.of(context).padding.top + 100,
+                left: AppDimensions.pageHorizontalPadding,
+                child: FloatingActionButton(
+                  heroTag: "test_ride_request",
+                  backgroundColor: AppColors.success,
+                  onPressed: _showTestRideRequest,
+                  child: const Icon(
+                    Icons.notification_add,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+
+              // Ride action buttons (shown when ride is accepted)
+              if (rideProvider.isRideAccepted)
+                Positioned(
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  child: RideActionButtons(
+                    rideRequest: rideProvider.currentRideRequest!,
+                    onNavigate: _navigateToPickup,
+                    onArrived: () => rideProvider.arriveAtPickup(),
+                    onStartRide: () => rideProvider.startRide(),
+                    onCompleteRide: () => rideProvider.completeRide(),
+                    isEnRouteToPickup:
+                        rideProvider.rideStatus == RideStatus.enRouteToPickup,
+                    isAtPickup:
+                        rideProvider.rideStatus == RideStatus.arrivedAtPickup,
+                    isRideStarted:
+                        rideProvider.rideStatus == RideStatus.rideStarted,
+                  ),
+                ),
 
               // Navigate button (shows when destination is selected)
               if (_selectedDestination != null)
