@@ -28,6 +28,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   GoogleMapController? _mapController;
   StreamSubscription<Position>? _locationSubscription;
+  bool _isMapReady = false;
 
   // Map state
   final Set<Marker> _markers = {};
@@ -126,13 +127,35 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     );
     final currentLocation = locationProvider.currentLocation;
 
-    if (_mapController != null && currentLocation != null) {
+    if (_mapController != null && _isMapReady && currentLocation != null) {
       final position = LatLng(
         currentLocation['latitude'],
         currentLocation['longitude'],
       );
-
+      
       MapService.animateToPosition(_mapController!, position);
+    }
+  }
+
+  void _animateToShowBothLocations() {
+    final locationProvider = Provider.of<LocationProvider>(
+      context,
+      listen: false,
+    );
+    final currentLocation = locationProvider.currentLocation;
+
+    if (_mapController != null && 
+        _isMapReady && 
+        currentLocation != null && 
+        _destinationLocation != null) {
+      
+      final currentPos = LatLng(
+        currentLocation['latitude'],
+        currentLocation['longitude'],
+      );
+      
+      final bounds = MapService.calculateBounds(currentPos, _destinationLocation!);
+      MapService.animateToBounds(_mapController!, bounds);
     }
   }
 
@@ -160,7 +183,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     _animateToShowBothLocations();
   }
 
-  void _createPolyline() {
+  void _createPolyline() async {
     final locationProvider = Provider.of<LocationProvider>(
       context,
       listen: false,
@@ -173,32 +196,22 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         currentLocation['longitude'],
       );
 
+      // Clear existing polylines
       setState(() {
         _polylines.clear();
-        _polylines.add(
-          MapService.createRoutePolyline(start, _destinationLocation!),
-        );
       });
-    }
-  }
 
-  void _animateToShowBothLocations() {
-    final locationProvider = Provider.of<LocationProvider>(
-      context,
-      listen: false,
-    );
-    final currentLocation = locationProvider.currentLocation;
-
-    if (_mapController != null &&
-        currentLocation != null &&
-        _destinationLocation != null) {
-      final start = LatLng(
-        currentLocation['latitude'],
-        currentLocation['longitude'],
+      // Get the route polyline from Directions API
+      final routePolyline = await MapService.createRoutePolyline(
+        start,
+        _destinationLocation!,
       );
 
-      final bounds = MapService.calculateBounds(start, _destinationLocation!);
-      MapService.animateToBounds(_mapController!, bounds);
+      if (routePolyline != null && mounted) {
+        setState(() {
+          _polylines.add(routePolyline);
+        });
+      }
     }
   }
 
@@ -297,6 +310,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                   : GoogleMap(
                     onMapCreated: (GoogleMapController controller) {
                       _mapController = controller;
+                      _isMapReady = true;
 
                       // Use addPostFrameCallback to avoid calling during build
                       WidgetsBinding.instance.addPostFrameCallback((_) {
