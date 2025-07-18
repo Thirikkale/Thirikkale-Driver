@@ -12,6 +12,7 @@ import 'package:thirikkale_driver/core/utils/app_styles.dart';
 import 'package:thirikkale_driver/core/utils/navigation_utils.dart';
 import 'package:thirikkale_driver/core/utils/snackbar_helper.dart';
 import 'package:thirikkale_driver/features/home/widgets/driver_sidebar.dart';
+import 'package:thirikkale_driver/features/home/widgets/location_error.dart';
 import 'package:thirikkale_driver/features/home/widgets/location_search_widget.dart';
 // import 'package:thirikkale_driver/features/home/widgets/driver_status_widget.dart';
 // import 'package:thirikkale_driver/features/home/widgets/earnings_bottom_sheet.dart';
@@ -132,7 +133,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         currentLocation['latitude'],
         currentLocation['longitude'],
       );
-      
+
       MapService.animateToPosition(_mapController!, position);
     }
   }
@@ -144,17 +145,19 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     );
     final currentLocation = locationProvider.currentLocation;
 
-    if (_mapController != null && 
-        _isMapReady && 
-        currentLocation != null && 
+    if (_mapController != null &&
+        _isMapReady &&
+        currentLocation != null &&
         _destinationLocation != null) {
-      
       final currentPos = LatLng(
         currentLocation['latitude'],
         currentLocation['longitude'],
       );
-      
-      final bounds = MapService.calculateBounds(currentPos, _destinationLocation!);
+
+      final bounds = MapService.calculateBounds(
+        currentPos,
+        _destinationLocation!,
+      );
       MapService.animateToBounds(_mapController!, bounds);
     }
   }
@@ -474,35 +477,13 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
               if (locationProvider.locationError != null)
                 Positioned(
                   bottom: 300,
-                  left: AppDimensions.pageHorizontalPadding,
-                  right: AppDimensions.pageHorizontalPadding,
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppColors.error.withOpacity(0.9),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.error, color: Colors.white),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            locationProvider.locationError!,
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: () async {
-                            await locationProvider.getCurrentLocation();
-                          },
-                          child: const Text(
-                            'Retry',
-                            style: TextStyle(color: Colors.white),
-                          ),
-                        ),
-                      ],
-                    ),
+                  left: 0,
+                  right: 0,
+                  child: LocationErrorWidget(
+                    errorMessage: locationProvider.locationError,
+                    onRetry: () async {
+                      await locationProvider.getCurrentLocation();
+                    },
                   ),
                 ),
             ],
