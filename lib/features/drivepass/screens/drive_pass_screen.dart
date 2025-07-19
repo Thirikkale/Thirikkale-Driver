@@ -336,3 +336,11 @@ class PaymentMethod {
     required this.subtitle,
   });
 }
+
+class SavedCard {
+  final String name;
+  final String subtitle;
+  final IconData icon;
+
+  SavedCard({required this.name, required this.subtitle, required this.icon});
+}

@@ -14,6 +14,7 @@ class PurchaseDetailsScreen extends StatefulWidget {
 
 class _PurchaseDetailsScreenState extends State<PurchaseDetailsScreen> {
   int? selectedPaymentMethodIndex;
+  String? selectedCardInfo; // To store selected card info
 
   final List<PaymentMethod> paymentMethods = [
     PaymentMethod(
@@ -22,14 +23,9 @@ class _PurchaseDetailsScreenState extends State<PurchaseDetailsScreen> {
       subtitle: 'Current balance: -LKR 1,118.00',
     ),
     PaymentMethod(
-      name: 'Visa ****1234',
+      name: 'Card',
       icon: Icons.credit_card,
-      subtitle: 'Expires 12/26',
-    ),
-    PaymentMethod(
-      name: 'MasterCard ****5678',
-      icon: Icons.credit_card,
-      subtitle: 'Expires 08/25',
+      subtitle: 'Select a payment card',
     ),
     PaymentMethod(name: 'Cash', icon: Icons.money, subtitle: 'Pay with cash'),
     PaymentMethod(
@@ -37,10 +33,19 @@ class _PurchaseDetailsScreenState extends State<PurchaseDetailsScreen> {
       icon: Icons.account_balance,
       subtitle: 'Transfer from bank',
     ),
-    PaymentMethod(
-      name: 'Add new card',
-      icon: Icons.add_card,
-      subtitle: 'Add a new payment card',
+  ];
+
+  // Saved cards data
+  final List<SavedCard> savedCards = [
+    SavedCard(
+      name: 'Visa ****1234',
+      subtitle: 'Expires 12/26',
+      icon: Icons.credit_card,
+    ),
+    SavedCard(
+      name: 'MasterCard ****5678',
+      subtitle: 'Expires 08/25',
+      icon: Icons.credit_card,
     ),
   ];
 
@@ -161,18 +166,19 @@ class _PurchaseDetailsScreenState extends State<PurchaseDetailsScreen> {
                     int index = entry.key;
                     PaymentMethod method = entry.value;
                     bool isSelected = selectedPaymentMethodIndex == index;
-                    bool isAddNewCard = method.name == 'Add new card';
+                    bool isCardOption = method.name == 'Card';
 
                     return Container(
                       margin: const EdgeInsets.only(bottom: 12),
                       child: InkWell(
                         onTap: () {
-                          if (isAddNewCard) {
-                            // Handle add new card action
-                            _handleAddNewCard();
+                          if (isCardOption) {
+                            // Handle card selection popup
+                            _showCardSelectionDialog();
                           } else {
                             setState(() {
                               selectedPaymentMethodIndex = index;
+                              if (!isCardOption) selectedCardInfo = null;
                             });
                           }
                         },
@@ -184,34 +190,11 @@ class _PurchaseDetailsScreenState extends State<PurchaseDetailsScreen> {
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color:
-                                  isAddNewCard
-                                      ? AppColors.primaryBlue.withValues(
-                                        alpha: 0.3,
-                                      )
-                                      : isSelected
+                                  isSelected
                                       ? AppColors.primaryBlue
                                       : AppColors.lightGrey,
                               width: isSelected ? 2 : 1,
-                              style:
-                                  isAddNewCard
-                                      ? BorderStyle.none
-                                      : BorderStyle.solid,
                             ),
-                            gradient:
-                                isAddNewCard
-                                    ? LinearGradient(
-                                      colors: [
-                                        AppColors.primaryBlue.withValues(
-                                          alpha: 0.05,
-                                        ),
-                                        AppColors.primaryBlue.withValues(
-                                          alpha: 0.1,
-                                        ),
-                                      ],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                    )
-                                    : null,
                           ),
                           child: Row(
                             children: [
@@ -220,14 +203,9 @@ class _PurchaseDetailsScreenState extends State<PurchaseDetailsScreen> {
                                 width: 48,
                                 height: 48,
                                 decoration: BoxDecoration(
-                                  color:
-                                      isAddNewCard
-                                          ? AppColors.primaryBlue.withValues(
-                                            alpha: 0.15,
-                                          )
-                                          : AppColors.primaryBlue.withValues(
-                                            alpha: 0.1,
-                                          ),
+                                  color: AppColors.primaryBlue.withValues(
+                                    alpha: 0.1,
+                                  ),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Icon(
@@ -245,48 +223,38 @@ class _PurchaseDetailsScreenState extends State<PurchaseDetailsScreen> {
                                     Text(
                                       method.name,
                                       style: AppTextStyles.heading3.copyWith(
-                                        fontWeight:
-                                            isAddNewCard
-                                                ? FontWeight.w700
-                                                : FontWeight.w600,
-                                        color:
-                                            isAddNewCard
-                                                ? AppColors.primaryBlue
-                                                : AppColors.black,
+                                        fontWeight: FontWeight.w600,
                                       ),
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      method.subtitle,
+                                      isCardOption && selectedCardInfo != null
+                                          ? selectedCardInfo!
+                                          : method.subtitle,
                                       style: AppTextStyles.bodyMedium.copyWith(
-                                        color:
-                                            isAddNewCard
-                                                ? AppColors.primaryBlue
-                                                    .withValues(alpha: 0.8)
-                                                : AppColors.textSecondary,
+                                        color: AppColors.textSecondary,
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
-                              // Radio button or add icon
-                              if (!isAddNewCard)
-                                Radio<int>(
-                                  value: index,
-                                  groupValue: selectedPaymentMethodIndex,
-                                  onChanged: (value) {
+                              // Radio button
+                              Radio<int>(
+                                value: index,
+                                groupValue: selectedPaymentMethodIndex,
+                                onChanged: (value) {
+                                  if (isCardOption) {
+                                    _showCardSelectionDialog();
+                                  } else {
                                     setState(() {
                                       selectedPaymentMethodIndex = value;
+                                      if (!isCardOption)
+                                        selectedCardInfo = null;
                                     });
-                                  },
-                                  activeColor: AppColors.primaryBlue,
-                                )
-                              else
-                                Icon(
-                                  Icons.add_circle_outline,
-                                  color: AppColors.primaryBlue,
-                                  size: 24,
-                                ),
+                                  }
+                                },
+                                activeColor: AppColors.primaryBlue,
+                              ),
                             ],
                           ),
                         ),
@@ -354,6 +322,213 @@ class _PurchaseDetailsScreenState extends State<PurchaseDetailsScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  void _showCardSelectionDialog() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (BuildContext context) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.6,
+          decoration: const BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+          ),
+          child: Column(
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Select a Card',
+                      style: AppTextStyles.heading2.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close, color: AppColors.black),
+                    ),
+                  ],
+                ),
+              ),
+
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    children: [
+                      // Saved Cards
+                      ...savedCards.map((card) {
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          child: InkWell(
+                            onTap: () {
+                              setState(() {
+                                selectedPaymentMethodIndex =
+                                    1; // Card option index
+                                selectedCardInfo = card.name;
+                              });
+                              Navigator.pop(context);
+                            },
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: AppColors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: AppColors.lightGrey,
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 40,
+                                    height: 40,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primaryBlue.withValues(
+                                        alpha: 0.1,
+                                      ),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Icon(
+                                      card.icon,
+                                      color: AppColors.primaryBlue,
+                                      size: 20,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          card.name,
+                                          style: AppTextStyles.bodyLarge
+                                              .copyWith(
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                        ),
+                                        Text(
+                                          card.subtitle,
+                                          style: AppTextStyles.bodySmall
+                                              .copyWith(
+                                                color: AppColors.textSecondary,
+                                              ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const Icon(
+                                    Icons.arrow_forward_ios,
+                                    size: 16,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
+
+                      const SizedBox(height: 12),
+
+                      // Add New Card Option
+                      InkWell(
+                        onTap: () {
+                          Navigator.pop(context);
+                          _handleAddNewCard();
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: AppColors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: AppColors.primaryBlue.withValues(
+                                alpha: 0.3,
+                              ),
+                              width: 1,
+                            ),
+                            gradient: LinearGradient(
+                              colors: [
+                                AppColors.primaryBlue.withValues(alpha: 0.05),
+                                AppColors.primaryBlue.withValues(alpha: 0.1),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: AppColors.primaryBlue.withValues(
+                                    alpha: 0.15,
+                                  ),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Icon(
+                                  Icons.add_card,
+                                  color: AppColors.primaryBlue,
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Add new card',
+                                      style: AppTextStyles.bodyLarge.copyWith(
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.primaryBlue,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Add a new payment card',
+                                      style: AppTextStyles.bodySmall.copyWith(
+                                        color: AppColors.primaryBlue.withValues(
+                                          alpha: 0.8,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Icon(
+                                Icons.add_circle_outline,
+                                color: AppColors.primaryBlue,
+                                size: 20,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
