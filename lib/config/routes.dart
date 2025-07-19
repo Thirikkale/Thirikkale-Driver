@@ -4,8 +4,8 @@ import 'package:thirikkale_driver/features/authentication/screens/get_started_sc
 import 'package:thirikkale_driver/features/authentication/screens/name_registration_screen.dart';
 import 'package:thirikkale_driver/features/home/screens/home_screen.dart';
 import 'package:thirikkale_driver/features/home/screens/driver_home_screen.dart';
-import 'package:thirikkale_driver/features/home/screens/drive_pass_screen.dart';
-import 'package:thirikkale_driver/features/home/screens/drive_pass_history_screen.dart';
+import 'package:thirikkale_driver/features/drivepass/screens/drive_pass_screen.dart';
+import 'package:thirikkale_driver/features/drivepass/screens/drive_pass_history_screen.dart';
 
 class AppRoutes {
   static const String initial = '/';

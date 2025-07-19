@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:thirikkale_driver/widgets/common/custom_appbar_name.dart';
 import 'package:thirikkale_driver/core/utils/app_styles.dart';
 
 class DrivePassHistoryScreen extends StatelessWidget {
@@ -7,40 +8,13 @@ class DrivePassHistoryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Row(
-          children: [
-            Text(
-              'Uber',
-              style: AppTextStyles.heading3.copyWith(
-                color: AppColors.black,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const Spacer(),
-            Container(
-              width: 24,
-              height: 24,
-              decoration: const BoxDecoration(
-                color: AppColors.black,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.question_mark,
-                color: AppColors.white,
-                size: 16,
-              ),
-            ),
-          ],
-        ),
+      // Custom AppBar
+      appBar: CustomAppbarName(
+        title: 'Drive Pass History',
+        showBackButton: true,
       ),
+
+      // Body
       body: Column(
         children: [
           Expanded(
@@ -49,14 +23,6 @@ class DrivePassHistoryScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Title
-                  Text(
-                    'Drive Pass history',
-                    style: AppTextStyles.heading1.copyWith(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
                   const SizedBox(height: 32),
 
                   // July 2025 Section
