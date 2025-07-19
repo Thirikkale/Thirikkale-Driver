@@ -22,15 +22,25 @@ class _PurchaseDetailsScreenState extends State<PurchaseDetailsScreen> {
       subtitle: 'Current balance: -LKR 1,118.00',
     ),
     PaymentMethod(
-      name: 'Card',
+      name: 'Visa ****1234',
       icon: Icons.credit_card,
-      subtitle: 'Add new card',
+      subtitle: 'Expires 12/26',
+    ),
+    PaymentMethod(
+      name: 'MasterCard ****5678',
+      icon: Icons.credit_card,
+      subtitle: 'Expires 08/25',
     ),
     PaymentMethod(name: 'Cash', icon: Icons.money, subtitle: 'Pay with cash'),
     PaymentMethod(
       name: 'Bank Transfer',
       icon: Icons.account_balance,
       subtitle: 'Transfer from bank',
+    ),
+    PaymentMethod(
+      name: 'Add new card',
+      icon: Icons.add_card,
+      subtitle: 'Add a new payment card',
     ),
   ];
 
@@ -151,14 +161,20 @@ class _PurchaseDetailsScreenState extends State<PurchaseDetailsScreen> {
                     int index = entry.key;
                     PaymentMethod method = entry.value;
                     bool isSelected = selectedPaymentMethodIndex == index;
+                    bool isAddNewCard = method.name == 'Add new card';
 
                     return Container(
                       margin: const EdgeInsets.only(bottom: 12),
                       child: InkWell(
                         onTap: () {
-                          setState(() {
-                            selectedPaymentMethodIndex = index;
-                          });
+                          if (isAddNewCard) {
+                            // Handle add new card action
+                            _handleAddNewCard();
+                          } else {
+                            setState(() {
+                              selectedPaymentMethodIndex = index;
+                            });
+                          }
                         },
                         borderRadius: BorderRadius.circular(12),
                         child: Container(
@@ -168,11 +184,34 @@ class _PurchaseDetailsScreenState extends State<PurchaseDetailsScreen> {
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color:
-                                  isSelected
+                                  isAddNewCard
+                                      ? AppColors.primaryBlue.withValues(
+                                        alpha: 0.3,
+                                      )
+                                      : isSelected
                                       ? AppColors.primaryBlue
                                       : AppColors.lightGrey,
                               width: isSelected ? 2 : 1,
+                              style:
+                                  isAddNewCard
+                                      ? BorderStyle.none
+                                      : BorderStyle.solid,
                             ),
+                            gradient:
+                                isAddNewCard
+                                    ? LinearGradient(
+                                      colors: [
+                                        AppColors.primaryBlue.withValues(
+                                          alpha: 0.05,
+                                        ),
+                                        AppColors.primaryBlue.withValues(
+                                          alpha: 0.1,
+                                        ),
+                                      ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    )
+                                    : null,
                           ),
                           child: Row(
                             children: [
@@ -181,9 +220,14 @@ class _PurchaseDetailsScreenState extends State<PurchaseDetailsScreen> {
                                 width: 48,
                                 height: 48,
                                 decoration: BoxDecoration(
-                                  color: AppColors.primaryBlue.withValues(
-                                    alpha: 0.1,
-                                  ),
+                                  color:
+                                      isAddNewCard
+                                          ? AppColors.primaryBlue.withValues(
+                                            alpha: 0.15,
+                                          )
+                                          : AppColors.primaryBlue.withValues(
+                                            alpha: 0.1,
+                                          ),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Icon(
@@ -201,30 +245,48 @@ class _PurchaseDetailsScreenState extends State<PurchaseDetailsScreen> {
                                     Text(
                                       method.name,
                                       style: AppTextStyles.heading3.copyWith(
-                                        fontWeight: FontWeight.w600,
+                                        fontWeight:
+                                            isAddNewCard
+                                                ? FontWeight.w700
+                                                : FontWeight.w600,
+                                        color:
+                                            isAddNewCard
+                                                ? AppColors.primaryBlue
+                                                : AppColors.black,
                                       ),
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
                                       method.subtitle,
                                       style: AppTextStyles.bodyMedium.copyWith(
-                                        color: AppColors.textSecondary,
+                                        color:
+                                            isAddNewCard
+                                                ? AppColors.primaryBlue
+                                                    .withValues(alpha: 0.8)
+                                                : AppColors.textSecondary,
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
-                              // Radio button
-                              Radio<int>(
-                                value: index,
-                                groupValue: selectedPaymentMethodIndex,
-                                onChanged: (value) {
-                                  setState(() {
-                                    selectedPaymentMethodIndex = value;
-                                  });
-                                },
-                                activeColor: AppColors.primaryBlue,
-                              ),
+                              // Radio button or add icon
+                              if (!isAddNewCard)
+                                Radio<int>(
+                                  value: index,
+                                  groupValue: selectedPaymentMethodIndex,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      selectedPaymentMethodIndex = value;
+                                    });
+                                  },
+                                  activeColor: AppColors.primaryBlue,
+                                )
+                              else
+                                Icon(
+                                  Icons.add_circle_outline,
+                                  color: AppColors.primaryBlue,
+                                  size: 24,
+                                ),
                             ],
                           ),
                         ),
@@ -292,6 +354,41 @@ class _PurchaseDetailsScreenState extends State<PurchaseDetailsScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  void _handleAddNewCard() {
+    // Handle add new card functionality
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Add New Card'),
+          content: const Text('This will open the card addition flow.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                // Here you would navigate to card addition screen
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Card addition feature coming soon!'),
+                    backgroundColor: AppColors.primaryBlue,
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryBlue,
+              ),
+              child: const Text('Add Card'),
+            ),
+          ],
+        );
+      },
     );
   }
 
