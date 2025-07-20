@@ -11,7 +11,6 @@ class AppRoutes {
   static const String nameReg = '/name-registration';
   static const String mobileRegistration = '/mobile-registration';
   static const String documentUpload = '/document-upload';
-  static const String testScreen = '/test-screen';
 
   static Map<String, WidgetBuilder> getRoutes() {
     return {
