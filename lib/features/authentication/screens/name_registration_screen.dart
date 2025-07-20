@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:thirikkale_driver/core/provider/auth_provider.dart';
 import 'package:thirikkale_driver/core/utils/navigation_utils.dart';
 import 'package:thirikkale_driver/features/authentication/screens/document_upload_screen.dart';
 import 'package:thirikkale_driver/features/authentication/widgets/sign_navigation_button_row.dart';
@@ -22,6 +24,16 @@ class _NameRegistrationScreenState extends State<NameRegistrationScreen> {
     super.initState();
     _firstNameController.addListener(_validateForm);
     _lastNameController.addListener(_validateForm);
+
+    // Pre-populate fields if names already exist in provider
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    if (authProvider.firstName != null && authProvider.firstName != 'Driver') {
+      _firstNameController.text = authProvider.firstName!;
+    }
+    if (authProvider.lastName != null && authProvider.lastName != 'User') {
+      _lastNameController.text = authProvider.lastName!;
+    }
+    _validateForm(); // Validate form after pre-population
   }
 
   @override
@@ -39,19 +51,46 @@ class _NameRegistrationScreenState extends State<NameRegistrationScreen> {
     });
   }
 
-  void _navigateToDocumentUpload() {
-    // Send details to backend also store the name in your AuthProvider here
-    // final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    // authProvider.setUserName(_firstNameController.text, _lastNameController.text);
+  void _completeProfile() async {
+    if (!_isFormValid) return;
 
-    Navigator.of(context).push(
-      NoAnimationPageRoute(
-        builder:
-            (context) => DocumentUploadScreen(
-              firstName: _firstNameController.text.trim(),
-            ),
-      ),
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+    final firstName = _firstNameController.text.trim();
+    final lastName = _lastNameController.text.trim();
+
+    // Store name in provider first
+    authProvider.setUserName(firstName, lastName);
+
+    if (!mounted) return;
+
+    // Complete the profile with names using the new API endpoint
+    final success = await authProvider.completeDriverProfile(
+      firstName: firstName,
+      lastName: lastName,
     );
+
+    if (!mounted) return;
+
+    if (success) {
+      // Navigate to document upload screen
+      Navigator.of(context).pushAndRemoveUntil(
+        NoAnimationPageRoute(
+          builder: (context) => DocumentUploadScreen(firstName: firstName),
+        ),
+        (route) => false,
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            authProvider.errorMessage ??
+                'Profile completion failed. Please try again.',
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
@@ -88,10 +127,23 @@ class _NameRegistrationScreenState extends State<NameRegistrationScreen> {
               controller: _lastNameController,
             ),
             const Spacer(),
-            SignNavigationButtonRow(
-              onBack: () => Navigator.pop(context),
-              onNext: _isFormValid ? _navigateToDocumentUpload : null,
-              nextEnabled: _isFormValid,
+            Consumer<AuthProvider>(
+              builder: (context, authProvider, child) {
+                if (authProvider.isLoading) {
+                  return const Column(
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 16),
+                      Text('Completing profile...'),
+                    ],
+                  );
+                }
+                return SignNavigationButtonRow(
+                  onBack: () => Navigator.pop(context),
+                  onNext: _isFormValid ? _completeProfile : null,
+                  nextEnabled: _isFormValid && !authProvider.isLoading,
+                );
+              },
             ),
             const SizedBox(height: 32),
           ],

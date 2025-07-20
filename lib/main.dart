@@ -5,7 +5,7 @@ import 'package:thirikkale_driver/config/routes.dart';
 import 'package:thirikkale_driver/core/provider/auth_provider.dart';
 import 'package:thirikkale_driver/core/utils/app_theme.dart';
 
-void main() async {    
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
   runApp(const ThirikkaleDriverApp());
@@ -16,16 +16,14 @@ class ThirikkaleDriverApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => AuthProvider())
-      ],
+      providers: [ChangeNotifierProvider(create: (_) => AuthProvider())],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'Thirikkale Driver',
         theme: AppTheme.lightTheme,
         // darkTheme: AppTheme.darkTheme,
         // themeMode: ThemeMode.system,
-        initialRoute: AppRoutes.documentUpload,
+        initialRoute: AppRoutes.initial,
         routes: AppRoutes.getRoutes(),
       ),
     );

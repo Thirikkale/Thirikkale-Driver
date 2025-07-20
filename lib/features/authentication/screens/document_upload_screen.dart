@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:thirikkale_driver/core/provider/auth_provider.dart';
 import 'package:thirikkale_driver/core/utils/app_dimensions.dart';
 import 'package:thirikkale_driver/core/utils/app_styles.dart';
+import 'package:thirikkale_driver/core/utils/snackbar_helper.dart';
 import 'package:thirikkale_driver/features/authentication/models/document_item_model.dart';
 import 'package:thirikkale_driver/features/authentication/models/vehicle_type_model.dart';
 import 'package:thirikkale_driver/features/authentication/widgets/document_list_item.dart';
@@ -41,24 +44,106 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
 
   late final List<VehicleType> _vehicleTypes;
   late VehicleType _selectedVehicle;
+  bool _isDriverRegistered = false;
 
   @override
   void initState() {
     super.initState();
     _vehicleTypes = [
-      VehicleType(name: 'Tuk', imagePath: 'assets/icons/vehicles/tuk.png', minAge: 21, minVehicleYear: 2000),
-      VehicleType(name: 'Ride', imagePath: 'assets/icons/vehicles/ride.png', minAge: 18, minVehicleYear: 2000),
-      VehicleType(name: 'Rush', imagePath: 'assets/icons/vehicles/rush.png', minAge: 18, minVehicleYear: 2000),
-      VehicleType(name: 'Prime Ride', imagePath: 'assets/icons/vehicles/primeRide.png', minAge: 20, minVehicleYear: 2010),
-      VehicleType(name: 'Squad', imagePath: 'assets/icons/vehicles/squad.png', minAge: 21, minVehicleYear: 2005),
+      VehicleType(
+        name: 'Tuk',
+        imagePath: 'assets/icons/vehicles/tuk.png',
+        minAge: 21,
+        minVehicleYear: 2000,
+      ),
+      VehicleType(
+        name: 'Ride',
+        imagePath: 'assets/icons/vehicles/ride.png',
+        minAge: 18,
+        minVehicleYear: 2000,
+      ),
+      VehicleType(
+        name: 'Rush',
+        imagePath: 'assets/icons/vehicles/rush.png',
+        minAge: 18,
+        minVehicleYear: 2000,
+      ),
+      VehicleType(
+        name: 'Prime Ride',
+        imagePath: 'assets/icons/vehicles/primeRide.png',
+        minAge: 20,
+        minVehicleYear: 2010,
+      ),
+      VehicleType(
+        name: 'Squad',
+        imagePath: 'assets/icons/vehicles/squad.png',
+        minAge: 21,
+        minVehicleYear: 2005,
+      ),
     ];
     _selectedVehicle = _vehicleTypes.first;
+
+    // Register driver when screen loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+      if (authProvider.isLoggedIn && authProvider.userId != null) {
+        // User is already logged in (auto-login scenario)
+        setState(() {
+          _isDriverRegistered = true;
+        });
+        print('✅ User already logged in, ready for document upload');
+      } else {
+        // New user, complete registration
+        _registerDriverWithBackend();
+      }
+    });
+  }
+
+  Future<void> _registerDriverWithBackend() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+    // Set vehicle type before registration
+    authProvider.setVehicleType(_selectedVehicle.name);
+
+    // Check if user is already logged in (auto-login scenario)
+    if (authProvider.isLoggedIn && authProvider.userId != null) {
+      print('✅ User already logged in, skipping registration');
+      if (mounted) {
+        setState(() {
+          _isDriverRegistered = true;
+        });
+      }
+      return;
+    }
+
+    // Complete registration for new users
+    final success = await authProvider.completeDriverRegistration();
+
+    // Check if widget is still mounted before using context
+    if (!mounted) return;
+
+    if (success) {
+      setState(() {
+        _isDriverRegistered = true;
+      });
+      SnackbarHelper.showSuccessSnackBar(
+        context,
+        'Registration completed! Please upload your documents.',
+      );
+    } else {
+      SnackbarHelper.showErrorSnackBar(
+        context,
+        authProvider.errorMessage ?? 'Registration failed',
+      );
+    }
   }
 
   int get _completedSteps => _documents.where((d) => d.isCompleted).length;
   bool get _allStepsCompleted => _completedSteps == _documents.length;
 
   void _toggleDocumentStatus(int index) {
+    if (!mounted) return;
     setState(() {
       _documents[index].isCompleted = !_documents[index].isCompleted;
     });
@@ -73,10 +158,29 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
     });
   }
 
+  void _handleContinue() {
+    if (!_allStepsCompleted) return;
+
+    if (!mounted) return;
+
+    // Navigate to driver home screen
+    // Replace this with your actual driver home screen navigation
+    SnackbarHelper.showSuccessSnackBar(
+      context,
+      'All documents uploaded! Welcome to Thirikkale Driver!',
+    );
+
+    // Example navigation (replace with your actual home screen):
+    // Navigator.of(context).pushAndRemoveUntil(
+    //   MaterialPageRoute(builder: (context) => const DriverHomeScreen()),
+    //   (route) => false,
+    // );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CustomAppbarName(title: 'Sigining up for', showBackButton: true),
+      appBar: CustomAppbarName(title: 'Sigining up for', showBackButton: false),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(
@@ -86,7 +190,9 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Padding(
-                 padding: const EdgeInsets.symmetric(horizontal: AppDimensions.pageHorizontalPadding),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppDimensions.pageHorizontalPadding,
+                ),
                 child: VehicleTypeSelector(
                   selectedVehicle: _selectedVehicle,
                   vehicleTypes: _vehicleTypes,
@@ -95,27 +201,42 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
                       setState(() {
                         _selectedVehicle = newValue;
                       });
+                      // Update vehicle type in provider
+                      final authProvider = Provider.of<AuthProvider>(
+                        context,
+                        listen: false,
+                      );
+                      authProvider.setVehicleType(newValue.name);
                     }
                   },
                 ),
               ),
               const SizedBox(height: 24),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppDimensions.pageHorizontalPadding),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppDimensions.pageHorizontalPadding,
+                ),
                 child: Text(
                   'Welcome, ${widget.firstName}',
-                  style: AppTextStyles.heading1,                
+                  style: AppTextStyles.heading1,
                 ),
               ),
               const SizedBox(height: 8),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppDimensions.pageHorizontalPadding),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppDimensions.pageHorizontalPadding,
+                ),
                 child: Text(
                   _allStepsCompleted
                       ? "You're all set and ready to drive!"
-                      : 'Complete ${_documents.length - _completedSteps} more steps to start earning.',
+                      : _isDriverRegistered
+                      ? 'Complete ${_documents.length - _completedSteps} more steps to start earning.'
+                      : 'Setting up your account...',
                   style: AppTextStyles.bodyLarge.copyWith(
-                    color: _allStepsCompleted ? AppColors.success : AppColors.textSecondary,
+                    color:
+                        _allStepsCompleted
+                            ? AppColors.success
+                            : AppColors.textSecondary,
                   ),
                 ),
               ),
@@ -132,21 +253,29 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
                   },
                 ),
               ),
-              
+
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppDimensions.pageHorizontalPadding),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: AppButtonStyles.primaryButton,
-                    onPressed:
-                        _allStepsCompleted
-                            ? () {
-                              // Handle continue action
-                            }
-                            : null,
-                    child: const Text('Continue'),
-                  ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppDimensions.pageHorizontalPadding,
+                ),
+                child: Consumer<AuthProvider>(
+                  builder: (context, authProvider, child) {
+                    if (authProvider.isLoading) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    return SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: AppButtonStyles.primaryButton,
+                        onPressed:
+                            _allStepsCompleted && _isDriverRegistered
+                                ? _handleContinue
+                                : null,
+                        child: const Text('Continue'),
+                      ),
+                    );
+                  },
                 ),
               ),
             ],

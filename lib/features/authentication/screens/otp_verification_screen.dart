@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:thirikkale_driver/core/provider/auth_provider.dart';
 import 'package:thirikkale_driver/core/utils/navigation_utils.dart';
 import 'package:thirikkale_driver/core/utils/snackbar_helper.dart';
+import 'package:thirikkale_driver/features/authentication/screens/document_upload_screen.dart';
 import 'package:thirikkale_driver/features/authentication/screens/name_registration_screen.dart';
 import 'package:thirikkale_driver/features/authentication/widgets/otp_input_row.dart';
 import 'package:thirikkale_driver/features/authentication/widgets/sign_navigation_button_row.dart';
@@ -28,12 +29,10 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   late Timer _timer;
   int _start = 30;
   bool _canResend = false;
-  late String _currentVerificationId;
 
   @override
   void initState() {
     super.initState();
-    _currentVerificationId = widget.verificationId;
     startTimer();
   }
 
@@ -73,17 +72,21 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     authProvider.sendOTP(
       phoneNumber: widget.phoneNumber,
       onCodeSent: (newVerificationId, resendToken) {
+        // Check if widget is still mounted before using context
+        if (!mounted) return;
+
         SnackbarHelper.showSuccessSnackBar(
           context,
           "New OTP sent successfully!",
         );
         // Update the state with the new verificationId
-        setState(() {
-          _currentVerificationId = newVerificationId;
-        });
+        setState(() {});
         startTimer(); // Restart the timer
       },
       onVerificationFailed: (error) {
+        // Check if widget is still mounted before using context
+        if (!mounted) return;
+
         SnackbarHelper.showErrorSnackBar(
           context,
           error.message ?? "Failed to send OTP",
@@ -97,34 +100,99 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     return _otpControllers.every((controller) => controller.text.isNotEmpty);
   }
 
+  // Get OTP code from controllers
+  String get _otpCode {
+    return _otpControllers.map((controller) => controller.text).join();
+  }
+
   // Verify OTP
-  void _verifyOtp() async {
-    if (!_isFormValid) return;
-
-    final otp = _otpControllers.map((c) => c.text).join();
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-
-    final success = await authProvider.verifyOTP(_currentVerificationId, otp);
-
-    if (success && mounted) {
-      // Token is now available in authProvider.idToken
-
-      // If you want to send the token to your backend immediately:
-      // final backendSuccess = await authProvider.sendTokenToBackend(
-      //   endpoint: 'https://your-api.com/api/auth/verify',
-      // );
-
-      // Phone verification successful, proceed to next screen
-      Navigator.of(context).push(
-        NoAnimationPageRoute(
-          builder: (context) => const NameRegistrationScreen(),
-        ),
-      );
-    } else if (mounted) {
-      // Show error message
+  void _verifyOTP() async {
+    if (!_isFormValid) {
       SnackbarHelper.showErrorSnackBar(
         context,
-        authProvider.errorMessage ?? 'Verification failed',
+        "Please enter the complete verification code",
+      );
+      return;
+    }
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+    // First verify the OTP
+    final verified = await authProvider.verifyOTP(
+      widget.verificationId,
+      _otpCode,
+    );
+
+    // Check if widget is still mounted before using context
+    if (!mounted) return;
+
+    if (verified) {
+      // Now check user registration status
+      final statusResult = await authProvider.checkUserRegistrationStatus();
+
+      // Check if widget is still mounted before using context
+      if (!mounted) return;
+
+      if (statusResult['success'] == true) {
+        if (statusResult['isAutoLogin'] == true) {
+          // Existing user with complete profile
+          final firstName = authProvider.firstName ?? 'Driver';
+
+          SnackbarHelper.showSuccessSnackBar(
+            context,
+            'Welcome back, $firstName!',
+          );
+
+          Navigator.of(context).pushAndRemoveUntil(
+            NoAnimationPageRoute(
+              builder: (context) => DocumentUploadScreen(firstName: firstName),
+            ),
+            (route) => false,
+          );
+        } else {
+          // New user OR existing user without complete profile
+          final hasCompleteProfile = statusResult['hasCompleteProfile'] == true;
+
+          if (hasCompleteProfile) {
+            // User has names but might need to complete other steps
+            print("\n\n\n6Inside of the Has Complete Profile\n");
+            final firstName = authProvider.firstName ?? 'Driver';
+
+            SnackbarHelper.showSuccessSnackBar(
+              context,
+              'Welcome back, $firstName!',
+            );
+
+            Navigator.of(context).push(
+              NoAnimationPageRoute(
+                builder:
+                    (context) => DocumentUploadScreen(firstName: firstName),
+              ),
+            );
+          } else {
+            // User needs to complete profile (set names)
+            SnackbarHelper.showSuccessSnackBar(
+              context,
+              'Phone verified successfully!',
+            );
+
+            Navigator.of(context).push(
+              NoAnimationPageRoute(
+                builder: (context) => const NameRegistrationScreen(),
+              ),
+            );
+          }
+        }
+      } else {
+        SnackbarHelper.showErrorSnackBar(
+          context,
+          statusResult['error'] ?? 'Failed to check registration status',
+        );
+      }
+    } else {
+      SnackbarHelper.showErrorSnackBar(
+        context,
+        authProvider.errorMessage ?? 'Invalid verification code',
       );
     }
   }
@@ -185,7 +253,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 
                 return SignNavigationButtonRow(
                   onBack: () => Navigator.pop(context),
-                  onNext: _isFormValid ? _verifyOtp : null,
+                  onNext: _isFormValid ? _verifyOTP : null,
                   nextEnabled: _isFormValid && !authProvider.isLoading,
                 );
               },
