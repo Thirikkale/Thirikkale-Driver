@@ -10,13 +10,13 @@ import 'package:thirikkale_driver/features/authentication/screens/upload_screens
 
 class DocumentListItem extends StatelessWidget {
   final DocumentItem document;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final Function(String documentTitle) onDocumentCompleted;
 
   const DocumentListItem({
     super.key,
     required this.document,
-    required this.onTap,
+    this.onTap,
     required this.onDocumentCompleted,
   });
 
@@ -28,7 +28,12 @@ class DocumentListItem extends StatelessWidget {
           // Navigate to profile picture screen
           final result = await Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (context) => const ProfilePictureScreen(),
+              builder:
+                  (context) => ProfilePictureScreen(
+                    onPhotoUploaded: () {
+                      onDocumentCompleted('Profile Picture');
+                    },
+                  ),
             ),
           );
 
@@ -83,7 +88,7 @@ class DocumentListItem extends StatelessWidget {
           }
         } else {
           // For other documents, use the original toggle behavior
-          onTap();
+          onTap?.call();
         }
       },
       child: Padding(

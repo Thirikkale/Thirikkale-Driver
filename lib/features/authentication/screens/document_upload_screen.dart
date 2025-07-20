@@ -142,13 +142,6 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
   int get _completedSteps => _documents.where((d) => d.isCompleted).length;
   bool get _allStepsCompleted => _completedSteps == _documents.length;
 
-  void _toggleDocumentStatus(int index) {
-    if (!mounted) return;
-    setState(() {
-      _documents[index].isCompleted = !_documents[index].isCompleted;
-    });
-  }
-
   void _markDocumentAsCompleted(String documentTitle) {
     setState(() {
       final index = _documents.indexWhere((doc) => doc.title == documentTitle);
@@ -247,7 +240,7 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
                   itemBuilder: (context, index) {
                     return DocumentListItem(
                       document: _documents[index],
-                      onTap: () => _toggleDocumentStatus(index),
+                      onTap: () {},
                       onDocumentCompleted: _markDocumentAsCompleted,
                     );
                   },

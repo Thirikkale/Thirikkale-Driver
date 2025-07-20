@@ -7,8 +7,29 @@ import 'package:thirikkale_driver/features/authentication/widgets/upload_screen_
 import 'package:thirikkale_driver/features/authentication/widgets/upload_screen_widgets/guidelines_widget.dart';
 import 'package:thirikkale_driver/widgets/common/custom_appbar.dart';
 
-class DrivingLicenseScreen extends StatelessWidget {
+class DrivingLicenseScreen extends StatefulWidget {
   const DrivingLicenseScreen({super.key});
+
+  @override
+  State<DrivingLicenseScreen> createState() => _DrivingLicenseScreenState();
+}
+
+class _DrivingLicenseScreenState extends State<DrivingLicenseScreen> {
+  Future<void> _handleTakePhoto() async {
+    final result = await Navigator.of(context).push<bool>(
+      NoAnimationPageRoute(
+        builder:
+            (context) => const CameraScreen(documentType: 'driving_license'),
+      ),
+    );
+
+    if (!mounted) return;
+
+    // If photo was successfully uploaded, return true to mark as completed
+    if (result == true) {
+      Navigator.of(context).pop(true);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -21,13 +42,15 @@ class DrivingLicenseScreen extends StatelessWidget {
       ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppDimensions.pageHorizontalPadding),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppDimensions.pageHorizontalPadding,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Upload Driving License', style: AppTextStyles.heading1),
               const SizedBox(height: 24),
-
+              
               Text(
                 'Why do we need your driving license?',
                 style: AppTextStyles.heading2,
@@ -68,16 +91,7 @@ class DrivingLicenseScreen extends StatelessWidget {
                 width: double.infinity,
                 child: ElevatedButton(
                   style: AppButtonStyles.primaryButton,
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      NoAnimationPageRoute(
-                        builder:
-                            (context) => const CameraScreen(
-                              documentType: 'driving_license',
-                            ),
-                      ),
-                    );
-                  },
+                  onPressed: _handleTakePhoto,
                   child: const Text('Take Photo'),
                 ),
               ),
