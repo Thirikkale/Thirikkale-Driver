@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:thirikkale_driver/config/env_config.dart';
@@ -177,26 +178,76 @@ class MapService {
 
   /// Animate camera to position
   static Future<void> animateToPosition(
-    GoogleMapController controller,
+    GoogleMapController? controller,
     LatLng position, {
     double zoom = 14,
   }) async {
-    await controller.animateCamera(
-      CameraUpdate.newCameraPosition(
-        CameraPosition(target: position, zoom: zoom),
-      ),
-    );
+    if (controller == null) {
+      print('MapController is null, cannot animate to position');
+      return;
+    }
+
+    try {
+      await controller.animateCamera(
+        CameraUpdate.newCameraPosition(
+          CameraPosition(target: position, zoom: zoom),
+        ),
+      );
+    } on PlatformException catch (e) {
+      if (e.code == 'channel-error') {
+        print('Map channel error - controller may not be ready: ${e.message}');
+        // Optionally retry after a delay
+        await Future.delayed(const Duration(milliseconds: 500));
+        try {
+          await controller.animateCamera(
+            CameraUpdate.newCameraPosition(
+              CameraPosition(target: position, zoom: zoom),
+            ),
+          );
+        } catch (retryError) {
+          print('Retry failed: $retryError');
+        }
+      } else {
+        print('Platform exception during animation: $e');
+      }
+    } catch (e) {
+      print('Error animating camera to position: $e');
+    }
   }
 
   /// Animate camera to show bounds
   static Future<void> animateToBounds(
-    GoogleMapController controller,
+    GoogleMapController? controller,
     LatLngBounds bounds, {
     double padding = 100,
   }) async {
-    await controller.animateCamera(
-      CameraUpdate.newLatLngBounds(bounds, padding),
-    );
+    if (controller == null) {
+      print('MapController is null, cannot animate to bounds');
+      return;
+    }
+
+    try {
+      await controller.animateCamera(
+        CameraUpdate.newLatLngBounds(bounds, padding),
+      );
+    } on PlatformException catch (e) {
+      if (e.code == 'channel-error') {
+        print('Map channel error - controller may not be ready: ${e.message}');
+        // Optionally retry after a delay
+        await Future.delayed(const Duration(milliseconds: 500));
+        try {
+          await controller.animateCamera(
+            CameraUpdate.newLatLngBounds(bounds, padding),
+          );
+        } catch (retryError) {
+          print('Retry failed: $retryError');
+        }
+      } else {
+        print('Platform exception during bounds animation: $e');
+      }
+    } catch (e) {
+      print('Error animating camera to bounds: $e');
+    }
   }
 
   /// Create route from driver to pickup location

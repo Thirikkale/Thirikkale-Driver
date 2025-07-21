@@ -32,6 +32,8 @@ class DriverHomeScreen extends StatefulWidget {
 class _DriverHomeScreenState extends State<DriverHomeScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   GoogleMapController? _mapController;
+  final Completer<GoogleMapController> _mapControllerCompleter =
+      Completer<GoogleMapController>();
   StreamSubscription<Position>? _locationSubscription;
   bool _isMapReady = false;
 
@@ -55,6 +57,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   @override
   void dispose() {
     _locationSubscription?.cancel();
+    _mapController?.dispose();
     LocationService.stopWatchingLocation();
     super.dispose();
   }
@@ -125,34 +128,65 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     }
   }
 
-  void _animateToCurrentLocation() {
+  // Map creation callback
+  void _onMapCreated(GoogleMapController controller) {
+    _mapController = controller;
+    if (!_mapControllerCompleter.isCompleted) {
+      _mapControllerCompleter.complete(controller);
+    }
+
+    // Set map ready flag after a small delay to ensure controller is fully initialized
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (mounted) {
+        setState(() {
+          _isMapReady = true;
+        });
+
+        // Now it's safe to animate
+        final locationProvider = Provider.of<LocationProvider>(
+          context,
+          listen: false,
+        );
+        if (locationProvider.currentLocation != null) {
+          _animateToCurrentLocation();
+        }
+      }
+    });
+  }
+
+  void _animateToCurrentLocation() async {
     final locationProvider = Provider.of<LocationProvider>(
       context,
       listen: false,
     );
     final currentLocation = locationProvider.currentLocation;
 
-    if (_mapController != null && _isMapReady && currentLocation != null) {
+    if (currentLocation != null && _isMapReady) {
       final position = LatLng(
         currentLocation['latitude'],
         currentLocation['longitude'],
       );
 
-      MapService.animateToPosition(_mapController!, position);
+      try {
+        final GoogleMapController controller =
+            await _mapControllerCompleter.future;
+        await MapService.animateToPosition(controller, position);
+      } catch (e) {
+        print('Error animating to current location: $e');
+      }
     }
   }
 
-  void _animateToShowBothLocations() {
+  void _animateToShowBothLocations() async {
     final locationProvider = Provider.of<LocationProvider>(
       context,
       listen: false,
     );
     final currentLocation = locationProvider.currentLocation;
 
-    if (_mapController != null &&
-        _isMapReady &&
-        currentLocation != null &&
-        _destinationLocation != null) {
+    if (currentLocation != null &&
+        _destinationLocation != null &&
+        _isMapReady) {
       final currentPos = LatLng(
         currentLocation['latitude'],
         currentLocation['longitude'],
@@ -162,7 +196,14 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         currentPos,
         _destinationLocation!,
       );
-      MapService.animateToBounds(_mapController!, bounds);
+
+      try {
+        final GoogleMapController controller =
+            await _mapControllerCompleter.future;
+        await MapService.animateToBounds(controller, bounds);
+      } catch (e) {
+        print('Error animating to bounds: $e');
+      }
     }
   }
 
@@ -295,6 +336,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   }
 
   // Create ride routes
+  // Updated createRideRoutes method
   void _createRideRoutes() async {
     final locationProvider = Provider.of<LocationProvider>(
       context,
@@ -305,7 +347,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     final currentLocation = locationProvider.currentLocation;
     final rideRequest = rideProvider.currentRideRequest;
 
-    if (currentLocation != null && rideRequest != null) {
+    if (currentLocation != null && rideRequest != null && _isMapReady) {
       final driverLocation = LatLng(
         currentLocation['latitude'],
         currentLocation['longitude'],
@@ -359,14 +401,18 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
           }
         });
 
-        // Animate to show all locations
-        if (_mapController != null && _isMapReady) {
+        // Animate to show all locations with proper error handling
+        try {
+          final GoogleMapController controller =
+              await _mapControllerCompleter.future;
           final bounds = MapService.calculateRideBounds(
             driverLocation,
             rideRequest.pickupLocation,
             rideRequest.destinationLocation,
           );
-          MapService.animateToBounds(_mapController!, bounds, padding: 150);
+          await MapService.animateToBounds(controller, bounds, padding: 150);
+        } catch (e) {
+          print('Error animating to ride bounds: $e');
         }
       }
     }
@@ -389,7 +435,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     }
   }
 
-   void _showTestRideRequest() {
+  void _showTestRideRequest() {
     final rideRequest = RideRequestService().generateDummyRideRequest();
     RideRequestService().showRideRequest(context, rideRequest);
   }
@@ -429,17 +475,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
               locationProvider.isLoadingCurrentLocation
                   ? const Center(child: CircularProgressIndicator())
                   : GoogleMap(
-                    onMapCreated: (GoogleMapController controller) {
-                      _mapController = controller;
-                      _isMapReady = true;
-
-                      // Use addPostFrameCallback to avoid calling during build
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        if (locationProvider.currentLocation != null) {
-                          _animateToCurrentLocation();
-                        }
-                      });
-                    },
+                    onMapCreated: _onMapCreated,
                     initialCameraPosition: CameraPosition(
                       target: _getInitialCameraPosition(),
                       zoom: 14.0, // Zoom in for more street-level detail

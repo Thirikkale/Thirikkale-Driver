@@ -27,6 +27,8 @@ class AuthProvider extends ChangeNotifier {
   String? _selectedVehicleType;
   bool _isLoggedIn = false;
   String? _userType;
+  String? _profilePictureUrl;
+  double? _rating;
 
   // Getters
   bool get isLoading => _isLoading;
@@ -43,6 +45,8 @@ class AuthProvider extends ChangeNotifier {
   String? get lastName => _lastName;
   String? get selectedVehicleType => _selectedVehicleType;
   String? get userType => _userType;
+  String? get profilePictureUrl => _profilePictureUrl;
+  double? get rating => _rating;
 
   bool get hasValidJWTToken {
     if (_accessToken == null || _tokenExpiresAt == null) return false;
@@ -53,6 +57,24 @@ class AuthProvider extends ChangeNotifier {
 
   // Add getter for login status
   bool get isLoggedIn => _isLoggedIn && hasValidJWTToken;
+
+  // Get full name helper
+  String get fullName {
+    if (_firstName != null && _lastName != null) {
+      return '$_firstName $_lastName';
+    } else if (_firstName != null) {
+      return _firstName!;
+    }
+    return 'Driver';
+  }
+
+  // Get display phone number
+  String get displayPhoneNumber {
+    if (_verifiedPhoneNumber != null) {
+      return _verifiedPhoneNumber!;
+    }
+    return 'Not provided';
+  }
 
   // Initialize AuthProvider - call this in main.dart
   Future<void> initialize() async {
@@ -522,6 +544,35 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> fetchDriverProfile() async {
+    if (_userId == null) return;
+
+    final token = await getCurrentToken();
+    if (token == null) return;
+
+    try {
+      // Call your backend API to get full driver profile
+      final result = await _driverService.getDriverProfile(
+        driverId: _userId!,
+        jwtToken: token,
+      );
+
+      if (result['success'] == true) {
+        final profile = result['data'];
+
+        // Update profile data
+        _profilePictureUrl = profile['profilePictureUrl'];
+        _rating = profile['rating']?.toDouble();
+
+        // Save updated data
+        await _saveTokensToStorage();
+        notifyListeners();
+      }
+    } catch (e) {
+      print('❌ Error fetching driver profile: $e');
+    }
+  }
+
   // Helper method to update vehicle type and sync with backend
   Future<void> setAndUpdateVehicleType(String vehicleType) async {
     // First set it locally (for immediate UI update)
@@ -580,6 +631,9 @@ class AuthProvider extends ChangeNotifier {
         'lastName': _lastName,
         'phoneNumber': _verifiedPhoneNumber,
         'driverId': _driverId,
+        'selectedVehicleType': _selectedVehicleType,
+        'profilePictureUrl': _profilePictureUrl,
+        'rating': _rating,
       };
 
       await prefs.setString('jwt_tokens', jsonEncode(tokenData));
@@ -607,6 +661,9 @@ class AuthProvider extends ChangeNotifier {
         _lastName = tokenData['lastName'];
         _verifiedPhoneNumber = tokenData['phoneNumber'];
         _driverId = tokenData['driverId'];
+        _selectedVehicleType = tokenData['selectedVehicleType'];
+        _profilePictureUrl = tokenData['profilePictureUrl'];
+        _rating = tokenData['rating']?.toDouble();
 
         if (tokenData['tokenExpiresAt'] != null) {
           _tokenExpiresAt = DateTime.fromMillisecondsSinceEpoch(

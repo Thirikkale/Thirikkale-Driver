@@ -8,6 +8,7 @@ import 'package:thirikkale_driver/features/authentication/models/document_item_m
 import 'package:thirikkale_driver/features/authentication/models/vehicle_type_model.dart';
 import 'package:thirikkale_driver/features/authentication/widgets/document_list_item.dart';
 import 'package:thirikkale_driver/features/authentication/widgets/vehicle_type_selector.dart';
+import 'package:thirikkale_driver/features/home/screens/driver_home_screen.dart';
 import 'package:thirikkale_driver/widgets/common/custom_appbar_name.dart';
 
 class DocumentUploadScreen extends StatefulWidget {
@@ -338,23 +339,49 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
     });
   }
 
-  void _handleContinue() {
+  void _handleContinue() async {
     if (!_allStepsCompleted) return;
 
     if (!mounted) return;
 
     // Navigate to driver home screen
-    // Replace this with your actual driver home screen navigation
-    SnackbarHelper.showSuccessSnackBar(
-      context,
-      'All documents uploaded! Welcome to Thirikkale Driver!',
-    );
-
-    // Example navigation (replace with your actual home screen):
-    // Navigator.of(context).pushAndRemoveUntil(
-    //   MaterialPageRoute(builder: (context) => const DriverHomeScreen()),
-    //   (route) => false,
-    // );
+    try {
+    // Get auth provider
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    
+    // Fetch latest driver profile data from backend
+    await authProvider.fetchDriverProfile();
+    
+    if (mounted) {
+      Navigator.of(context).pop(); // Close loading dialog
+      
+      SnackbarHelper.showSuccessSnackBar(
+        context,
+        'All documents uploaded! Welcome to Thirikkale Driver!',
+      );
+      
+      // Navigate to driver home screen
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const DriverHomeScreen()),
+        (route) => false,
+      );
+    }
+  } catch (e) {
+    if (mounted) {
+      Navigator.of(context).pop(); // Close loading dialog
+      
+      SnackbarHelper.showErrorSnackBar(
+        context,
+        'Profile setup completed, but some data might not be synced.',
+      );
+      
+      // Still navigate to home screen
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const DriverHomeScreen()),
+        (route) => false,
+      );
+    }
+  }
   }
 
   @override

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:thirikkale_driver/core/provider/auth_provider.dart';
 import 'package:thirikkale_driver/core/utils/app_dimensions.dart';
 import 'package:thirikkale_driver/core/utils/app_styles.dart';
 
@@ -24,42 +26,62 @@ class DriverSidebar extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const CircleAvatar(
-                          radius: 30,
-                          backgroundColor: AppColors.white,
-                          child: Icon(
-                            Icons.person,
-                            size: 36,
-                            color: AppColors.primaryBlue,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Olivia Bennet',
-                          style: AppTextStyles.heading2.copyWith(
-                            color: AppColors.white,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        
-                        Row(
+                    Consumer<AuthProvider>(
+                      builder: (context, authProvider, child) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(Icons.star, color: AppColors.white,),
-                            SizedBox(width: 2.5,),
+                            CircleAvatar(
+                              radius: 30,
+                              backgroundColor: AppColors.white,
+                              backgroundImage:
+                                  authProvider.profilePictureUrl != null &&
+                                          authProvider
+                                              .profilePictureUrl!
+                                              .isNotEmpty
+                                      ? NetworkImage(
+                                        authProvider.profilePictureUrl!,
+                                      )
+                                      : null,
+                              child:
+                                  (authProvider.profilePictureUrl == null ||
+                                          authProvider
+                                              .profilePictureUrl!
+                                              .isEmpty)
+                                      ? const Icon(
+                                        Icons.person,
+                                        size: 36,
+                                        color: AppColors.primaryBlue,
+                                      )
+                                      : null,
+                            ),
+
+                            const SizedBox(height: 16),
                             Text(
-                              '5.00',
-                              style: AppTextStyles.bodyLarge.copyWith(
+                              authProvider.fullName,
+                              style: AppTextStyles.heading2.copyWith(
                                 color: AppColors.white,
-                                fontWeight: FontWeight.w600,
                               ),
                             ),
+                            const SizedBox(height: 4),
+
+                            Row(
+                              children: [
+                                Icon(Icons.star, color: AppColors.white),
+                                SizedBox(width: 2.5),
+                                Text(
+                                  '5.00',
+                                  style: AppTextStyles.bodyLarge.copyWith(
+                                    color: AppColors.white,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
                           ],
-                        ),
-                        const SizedBox(height: 8),
-                      ],
+                        );
+                      },
                     ),
                   ],
                 ),
