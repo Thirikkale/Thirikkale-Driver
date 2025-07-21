@@ -124,8 +124,9 @@ class _MobileRegistrationScreenState extends State<MobileRegistrationScreen> {
         return ModernLoadingOverlay(
           isLoading: isLoading,
           message: "Sending verification code...",
-          style: LoadingStyle.dots, // Choose your preferred style
+          style: LoadingStyle.dots, 
           indicatorColor: AppColors.primaryBlue,
+
           child: Scaffold(
             appBar: CustomAppBar(
               centerWidget: Image.asset(

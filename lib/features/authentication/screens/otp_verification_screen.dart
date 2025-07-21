@@ -9,6 +9,7 @@ import 'package:thirikkale_driver/features/authentication/screens/name_registrat
 import 'package:thirikkale_driver/features/authentication/widgets/otp_input_row.dart';
 import 'package:thirikkale_driver/features/authentication/widgets/sign_navigation_button_row.dart';
 import 'package:thirikkale_driver/widgets/common/custom_appbar.dart';
+import 'package:thirikkale_driver/widgets/custom_modern_loading_overlay.dart';
 
 class OtpVerificationScreen extends StatefulWidget {
   final String verificationId;
@@ -199,69 +200,71 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: CustomAppBar(
-        centerWidget: Image.asset(
-          'assets/icons/thirikkale_driver_appbar_logo.png',
-          height: 50.0,
-        ),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 24),
-            Text(
-              'Enter the 6-digit code sent via\nSMS to ${widget.phoneNumber}',
-              style: Theme.of(context).textTheme.headlineSmall,
+    return Consumer<AuthProvider>(
+      builder: (context, authProvider, child) {
+        return ModernLoadingOverlay(
+          isLoading: authProvider.isLoading,
+          message: "Verifying OTP...",
+          style: LoadingStyle.dots,
+
+          child: Scaffold(
+            appBar: CustomAppBar(
+              centerWidget: Image.asset(
+                'assets/icons/thirikkale_driver_appbar_logo.png',
+                height: 50.0,
+              ),
             ),
+            body: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 24),
+                  Text(
+                    'Enter the 6-digit code sent via\nSMS to ${widget.phoneNumber}',
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
 
-            const SizedBox(height: 32),
+                  const SizedBox(height: 32),
 
-            // OTP fields
-            OtpInputRow(
-              controllers: _otpControllers,
-              onChanged: (value, index) {
-                setState(() {}); // Update UI when text changes
-              },
+                  // OTP fields
+                  OtpInputRow(
+                    controllers: _otpControllers,
+                    onChanged: (value, index) {
+                      setState(() {}); // Update UI when text changes
+                    },
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Resend OTP Timer and Button
+                  Center(
+                    child:
+                        _canResend
+                            ? TextButton(
+                              onPressed: _resendOtp,
+                              child: const Text('Resend Code'),
+                            )
+                            : Text(
+                              'Resend code in 00:${_start.toString().padLeft(2, '0')}',
+                              style: TextStyle(color: Colors.grey.shade600),
+                            ),
+                  ),
+
+                  const Spacer(),
+
+                  // Navigation buttons
+                  SignNavigationButtonRow(
+                    onBack: () => Navigator.pop(context),
+                    onNext: _isFormValid ? _verifyOTP : null,
+                    nextEnabled: _isFormValid && !authProvider.isLoading,
+                  ),
+                  const SizedBox(height: 32),
+                ],
+              ),
             ),
-            const SizedBox(height: 24),
-
-            // Resend OTP Timer and Button
-            Center(
-              child:
-                  _canResend
-                      ? TextButton(
-                        onPressed: _resendOtp,
-                        child: const Text('Resend Code'),
-                      )
-                      : Text(
-                        'Resend code in 00:${_start.toString().padLeft(2, '0')}',
-                        style: TextStyle(color: Colors.grey.shade600),
-                      ),
-            ),
-
-            const Spacer(),
-
-            // Navigation buttons with loading state
-            Consumer<AuthProvider>(
-              builder: (context, authProvider, child) {
-                if (authProvider.isLoading) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                return SignNavigationButtonRow(
-                  onBack: () => Navigator.pop(context),
-                  onNext: _isFormValid ? _verifyOTP : null,
-                  nextEnabled: _isFormValid && !authProvider.isLoading,
-                );
-              },
-            ),
-            const SizedBox(height: 32),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
