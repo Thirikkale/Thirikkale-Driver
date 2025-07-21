@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:thirikkale_driver/core/utils/app_styles.dart';
 import 'package:thirikkale_driver/features/home/screens/drive_pass_history_screen.dart';
+import 'package:thirikkale_driver/widgets/common/custom_appbar_name.dart';
 
 class DrivePassScreen extends StatefulWidget {
   const DrivePassScreen({super.key});
@@ -39,39 +40,7 @@ class _DrivePassScreenState extends State<DrivePassScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Row(
-          children: [
-            Text(
-              'Home',
-              style: AppTextStyles.heading3.copyWith(
-                color: AppColors.black,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const Spacer(),
-            Container(
-              width: 24,
-              height: 24,
-              decoration: const BoxDecoration(
-                color: AppColors.black,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.question_mark,
-                color: AppColors.white,
-                size: 16,
-              ),
-            ),
-          ],
-        ),
-      ),
+      appBar: CustomAppbarName(title: "Drive Pass", showBackButton: true),
       body: Column(
         children: [
           Expanded(
@@ -83,10 +52,7 @@ class _DrivePassScreenState extends State<DrivePassScreen> {
                   // Title
                   Text(
                     'Choose a Drive Pass',
-                    style: AppTextStyles.heading1.copyWith(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: AppTextStyles.heading1,
                   ),
                   const SizedBox(height: 32),
 
@@ -125,14 +91,14 @@ class _DrivePassScreenState extends State<DrivePassScreen> {
                                 width: 48,
                                 height: 48,
                                 decoration: BoxDecoration(
-                                  color: AppColors.warning.withValues(
+                                  color: AppColors.primaryBlue.withValues(
                                     alpha: 0.2,
                                   ),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Icon(
                                   option.icon,
-                                  color: AppColors.warning,
+                                  color: AppColors.primaryBlue,
                                   size: 24,
                                 ),
                               ),
@@ -232,13 +198,6 @@ class _DrivePassScreenState extends State<DrivePassScreen> {
                     description:
                         'Since you pay no Service Fee, you keep that amount in earnings for every trip.',
                   ),
-                  const SizedBox(height: 20),
-                  _buildBenefitItem(
-                    icon: Icons.account_balance_wallet,
-                    title: 'Pay with your Uber balance',
-                    description:
-                        'Purchase Drive Pass even if your balance is negative, and pay it off with your earnings.',
-                  ),
                 ],
               ),
             ),
@@ -293,7 +252,7 @@ class _DrivePassScreenState extends State<DrivePassScreen> {
           width: 40,
           height: 40,
           decoration: const BoxDecoration(
-            color: AppColors.black,
+            color: AppColors.primaryBlue,
             shape: BoxShape.circle,
           ),
           child: Icon(icon, color: AppColors.white, size: 20),
@@ -387,9 +346,9 @@ class _DrivePassScreenState extends State<DrivePassScreen> {
 
                   const SizedBox(height: 32),
 
-                  // Current Uber balance
+                  // Current wallet balance
                   _buildBalanceRow(
-                    'Current Uber balance',
+                    'Current wallet balance',
                     '-LKR 1,118.00',
                     isNegative: true,
                   ),
@@ -419,23 +378,23 @@ class _DrivePassScreenState extends State<DrivePassScreen> {
                   const Divider(),
                   const SizedBox(height: 16),
 
-                  // New Uber balance
+                  // New Wallet balance
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildBalanceRow(
-                        'New Uber balance',
+                        'New wallet balance',
                         'LKR 1,677.00',
                         isTotal: true,
                       ),
                       const SizedBox(height: 8),
-                      Text(
-                        'Purchasing a Drive Pass requires no upfront payment. We\'ll deduct the cost of the pass from your wallet now and future earnings will be automatically be applied toward it.',
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.textSecondary,
-                          height: 1.4,
-                        ),
-                      ),
+                      // Text(
+                      //   'Purchasing a Drive Pass requires no upfront payment. We\'ll deduct the cost of the pass from your wallet now and future earnings will be automatically be applied toward it.',
+                      //   style: AppTextStyles.bodySmall.copyWith(
+                      //     color: AppColors.textSecondary,
+                      //     height: 1.4,
+                      //   ),
+                      // ),
                     ],
                   ),
 
