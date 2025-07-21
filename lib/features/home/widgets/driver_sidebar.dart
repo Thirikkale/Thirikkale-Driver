@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:thirikkale_driver/core/utils/app_dimensions.dart';
 import 'package:thirikkale_driver/core/utils/app_styles.dart';
-import 'package:thirikkale_driver/features/home/screens/drive_pass_screen.dart';
+import 'package:thirikkale_driver/features/drivepass/screens/drive_pass_screen.dart';
 
 class DriverSidebar extends StatelessWidget {
   const DriverSidebar({super.key});

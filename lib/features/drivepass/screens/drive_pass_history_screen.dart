@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:thirikkale_driver/core/utils/app_styles.dart';
 import 'package:thirikkale_driver/widgets/common/custom_appbar_name.dart';
+import 'package:thirikkale_driver/core/utils/app_styles.dart';
 
 class DrivePassHistoryScreen extends StatelessWidget {
   const DrivePassHistoryScreen({super.key});
@@ -8,8 +8,13 @@ class DrivePassHistoryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: CustomAppbarName(title: "Drive Pass history", showBackButton: true),
+      // Custom AppBar
+      appBar: CustomAppbarName(
+        title: 'Drive Pass History',
+        showBackButton: true,
+      ),
+
+      // Body
       body: Column(
         children: [
           Expanded(
@@ -18,6 +23,8 @@ class DrivePassHistoryScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  const SizedBox(height: 32),
+
                   // July 2025 Section
                   _buildMonthSection('July 2025', [
                     DrivePassHistoryItem(

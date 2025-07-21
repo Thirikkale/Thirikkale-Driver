@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:thirikkale_driver/core/utils/app_styles.dart';
-import 'package:thirikkale_driver/features/home/screens/drive_pass_history_screen.dart';
 import 'package:thirikkale_driver/widgets/common/custom_appbar_name.dart';
+import 'package:thirikkale_driver/features/drivepass/screens/drive_pass_history_screen.dart';
+import 'package:thirikkale_driver/features/drivepass/screens/purchase_details_screen.dart';
 
 class DrivePassScreen extends StatefulWidget {
   const DrivePassScreen({super.key});
@@ -39,8 +40,10 @@ class _DrivePassScreenState extends State<DrivePassScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: CustomAppbarName(title: "Drive Pass", showBackButton: true),
+      // Custom AppBar
+      appBar: CustomAppbarName(title: 'Drive Pass', showBackButton: true),
+
+      // Body
       body: Column(
         children: [
           Expanded(
@@ -198,6 +201,13 @@ class _DrivePassScreenState extends State<DrivePassScreen> {
                     description:
                         'Since you pay no Service Fee, you keep that amount in earnings for every trip.',
                   ),
+                  const SizedBox(height: 20),
+                  _buildBenefitItem(
+                    icon: Icons.account_balance_wallet,
+                    title: 'Pay with your Thirikkale balance',
+                    description:
+                        'Purchase Drive Pass even if your balance is negative, and pay it off with your earnings.',
+                  ),
                 ],
               ),
             ),
@@ -287,191 +297,16 @@ class _DrivePassScreenState extends State<DrivePassScreen> {
     if (selectedPassIndex != null) {
       final selectedOption = drivePassOptions[selectedPassIndex!];
 
-      // Show purchase details bottom sheet with animation
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (context) => _buildPurchaseDetailsSheet(selectedOption),
+      // Navigate to Purchase Details screen
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder:
+              (context) =>
+                  PurchaseDetailsScreen(selectedOption: selectedOption),
+        ),
       );
     }
-  }
-
-  Widget _buildPurchaseDetailsSheet(DrivePassOption selectedOption) {
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.7,
-      decoration: const BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
-        ),
-      ),
-      child: Column(
-        children: [
-          // Header with close button
-          Container(
-            padding: const EdgeInsets.all(20),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Purchase details',
-                  style: AppTextStyles.heading2.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close, color: AppColors.black),
-                ),
-              ],
-            ),
-          ),
-
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Description
-                  Text(
-                    'With Drive Pass, you\'re no longer charged a service fee after this trip. You will save on every trip.',
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.textSecondary,
-                      height: 1.4,
-                    ),
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  // Current wallet balance
-                  _buildBalanceRow(
-                    'Current wallet balance',
-                    '-LKR 1,118.00',
-                    isNegative: true,
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Drive Pass
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildBalanceRow(
-                        'Drive Pass',
-                        '-${selectedOption.price}',
-                        isNegative: true,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        selectedOption.duration,
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-                  const Divider(),
-                  const SizedBox(height: 16),
-
-                  // New Wallet balance
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildBalanceRow(
-                        'New wallet balance',
-                        'LKR 1,677.00',
-                        isTotal: true,
-                      ),
-                      const SizedBox(height: 8),
-                      // Text(
-                      //   'Purchasing a Drive Pass requires no upfront payment. We\'ll deduct the cost of the pass from your wallet now and future earnings will be automatically be applied toward it.',
-                      //   style: AppTextStyles.bodySmall.copyWith(
-                      //     color: AppColors.textSecondary,
-                      //     height: 1.4,
-                      //   ),
-                      // ),
-                    ],
-                  ),
-
-                  const Spacer(),
-                ],
-              ),
-            ),
-          ),
-
-          // Purchase button
-          Container(
-            padding: const EdgeInsets.all(20),
-            child: SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context); // Close the bottom sheet
-                  // Handle purchase logic here
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Drive Pass purchased successfully!'),
-                      backgroundColor: AppColors.success,
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryBlue,
-                  foregroundColor: AppColors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: Text(
-                  'Purchase Drive Pass',
-                  style: AppTextStyles.button.copyWith(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBalanceRow(
-    String title,
-    String amount, {
-    bool isNegative = false,
-    bool isTotal = false,
-  }) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          title,
-          style: AppTextStyles.bodyLarge.copyWith(
-            fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
-          ),
-        ),
-        Text(
-          amount,
-          style: AppTextStyles.bodyLarge.copyWith(
-            fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
-            color:
-                isNegative
-                    ? AppColors.error
-                    : isTotal
-                    ? AppColors.success
-                    : AppColors.black,
-          ),
-        ),
-      ],
-    );
   }
 }
 
@@ -485,4 +320,24 @@ class DrivePassOption {
     required this.price,
     required this.icon,
   });
+}
+
+class PaymentMethod {
+  final String name;
+  final IconData icon;
+  final String subtitle;
+
+  PaymentMethod({
+    required this.name,
+    required this.icon,
+    required this.subtitle,
+  });
+}
+
+class SavedCard {
+  final String name;
+  final String subtitle;
+  final IconData icon;
+
+  SavedCard({required this.name, required this.subtitle, required this.icon});
 }
