@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:thirikkale_driver/core/utils/app_dimensions.dart';
 import 'package:thirikkale_driver/core/utils/app_styles.dart';
+import 'package:thirikkale_driver/core/utils/navigation_utils.dart';
+import 'package:thirikkale_driver/features/trip_history/screens/trip_history_screen.dart';
 
 class DriverSidebar extends StatelessWidget {
   const DriverSidebar({super.key});
@@ -177,9 +179,14 @@ class DriverSidebar extends StatelessWidget {
   }
 
   void _navigateToTripHistory(BuildContext context) {
-    Navigator.pop(context);
+    Navigator.of(context).push(
+      NoAnimationPageRoute(
+        builder: (context) => const TripHistoryScreen(),
+      ),
+    );
     // Navigate to trip history screen
     print('Navigate to Trip History');
+    
   }
 
   void _navigateToEarnings(BuildContext context) {
