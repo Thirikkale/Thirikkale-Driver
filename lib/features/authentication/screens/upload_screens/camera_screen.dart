@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:thirikkale_driver/core/provider/auth_provider.dart';
 import 'package:thirikkale_driver/core/utils/app_styles.dart';
 import 'package:thirikkale_driver/core/utils/snackbar_helper.dart';
+import 'package:thirikkale_driver/widgets/custom_modern_loading_overlay.dart';
 
 class CameraScreen extends StatefulWidget {
   final String documentType;
@@ -260,127 +261,126 @@ class _CameraScreenState extends State<CameraScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: Text(
-          _getScreenTitle(),
-          style: const TextStyle(color: Colors.white),
+    return ModernLoadingOverlay(
+      isLoading: _isLoading,
+      message: "Uploading...",
+      style: LoadingStyle.circular,
+
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          iconTheme: const IconThemeData(color: Colors.white),
+          title: Text(
+            _getScreenTitle(),
+            style: const TextStyle(color: Colors.white),
+          ),
         ),
-      ),
-      body:
-          _isInitialized
-              ? Stack(
-                children: [
-                  // Camera preview
-                  Positioned.fill(child: CameraPreview(_controller!)),
+        body:
+            _isInitialized
+                ? Stack(
+                  children: [
+                    // Camera preview
+                    Positioned.fill(child: CameraPreview(_controller!)),
 
-                  // Guidelines overlay
-                  if (widget.documentType == 'profile_picture')
-                    Positioned.fill(
-                      child: CustomPaint(painter: FaceGuidePainter()),
-                    ),
-
-                  if (widget.documentType == 'driving_license')
-                    Positioned.fill(
-                      child: CustomPaint(painter: DocumentGuidePainter()),
-                    ),
-
-                  if (widget.documentType == 'revenue_license')
-                    Positioned.fill(
-                      child: CustomPaint(painter: RevenueLicenseGuidePainter()),
-                    ),
-
-                  if (widget.documentType == 'vehicle_insurance')
-                    Positioned.fill(
-                      child: CustomPaint(painter: DocumentGuidePainter()),
-                    ),
-
-                  if (widget.documentType == 'vehicle_registration')
-                    Positioned.fill(
-                      child: CustomPaint(
-                        painter: VehicleRegistrationDocPainter(),
+                    // Guidelines overlay
+                    if (widget.documentType == 'profile_picture')
+                      Positioned.fill(
+                        child: CustomPaint(painter: FaceGuidePainter()),
                       ),
-                    ),
-                  // Bottom controls
-                  Positioned(
-                    bottom: 50,
-                    left: 0,
-                    right: 0,
-                    child: Column(
-                      children: [
-                        if (widget.documentType == 'profile_picture')
-                          Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 32),
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.black54,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
 
-                            child: Text(
-                              _getInstructionText(),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
+                    if (widget.documentType == 'driving_license')
+                      Positioned.fill(
+                        child: CustomPaint(painter: DocumentGuidePainter()),
+                      ),
+
+                    if (widget.documentType == 'revenue_license')
+                      Positioned.fill(
+                        child: CustomPaint(
+                          painter: RevenueLicenseGuidePainter(),
+                        ),
+                      ),
+
+                    if (widget.documentType == 'vehicle_insurance')
+                      Positioned.fill(
+                        child: CustomPaint(painter: DocumentGuidePainter()),
+                      ),
+
+                    if (widget.documentType == 'vehicle_registration')
+                      Positioned.fill(
+                        child: CustomPaint(
+                          painter: VehicleRegistrationDocPainter(),
+                        ),
+                      ),
+                    // Bottom controls
+                    Positioned(
+                      bottom: 50,
+                      left: 0,
+                      right: 0,
+                      child: Column(
+                        children: [
+                          if (widget.documentType == 'profile_picture')
+                            Container(
+                              margin: const EdgeInsets.symmetric(
+                                horizontal: 32,
                               ),
-                              textAlign: TextAlign.center,
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.black54,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+
+                              child: Text(
+                                _getInstructionText(),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
                             ),
-                          ),
 
-                        const SizedBox(height: 24),
+                          const SizedBox(height: 24),
 
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            const SizedBox(width: 60), // Spacer
-                            GestureDetector(
-                              onTap: _isLoading ? null : _takePicture,
-                              child: Container(
-                                width: 70,
-                                height: 70,
-                                decoration: BoxDecoration(
-                                  color:
-                                      _isLoading ? Colors.grey : Colors.white,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: Colors.white,
-                                    width: 3,
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              const SizedBox(width: 60), // Spacer
+                              GestureDetector(
+                                onTap: _isLoading ? null : _takePicture,
+                                child: Container(
+                                  width: 70,
+                                  height: 70,
+                                  decoration: BoxDecoration(
+                                    color:
+                                        _isLoading ? Colors.grey : Colors.white,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: Colors.white,
+                                      width: 3,
+                                    ),
+                                  ),
+                                  child: const Icon(
+                                    Icons.camera_alt,
+                                    size: 35,
+                                    color: Colors.black,
                                   ),
                                 ),
-                                child:
-                                    _isLoading
-                                        ? const Center(
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            valueColor:
-                                                AlwaysStoppedAnimation<Color>(
-                                                  Colors.black,
-                                                ),
-                                          ),
-                                        )
-                                        : const Icon(
-                                          Icons.camera_alt,
-                                          size: 35,
-                                          color: Colors.black,
-                                        ),
                               ),
-                            ),
 
-                            const SizedBox(width: 60),
-                          ],
-                        ),
-                      ],
+                              const SizedBox(width: 60),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              )
-              : const Center(
-                child: CircularProgressIndicator(color: Colors.white),
-              ),
+                  ],
+                )
+                : const Center(
+                  child: CircularProgressIndicator(color: Colors.white),
+                ),
+      ),
     );
   }
 }
