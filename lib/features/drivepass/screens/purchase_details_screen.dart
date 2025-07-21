@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:thirikkale_driver/core/utils/app_styles.dart';
+import 'package:thirikkale_driver/core/utils/snackbar_helper.dart';
 import 'package:thirikkale_driver/widgets/common/custom_appbar_name.dart';
 import 'package:thirikkale_driver/features/drivepass/screens/drive_pass_screen.dart';
 
@@ -282,13 +283,9 @@ class _PurchaseDetailsScreenState extends State<PurchaseDetailsScreen> {
                               paymentMethods[selectedPaymentMethodIndex!];
 
                           // Show success message
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'Drive Pass purchased successfully with ${selectedPaymentMethod.name}!',
-                              ),
-                              backgroundColor: AppColors.success,
-                            ),
+                          SnackbarHelper.showSuccessSnackBar(
+                            context,
+                            'Drive Pass purchased successfully with ${selectedPaymentMethod.name}!',
                           );
 
                           // Navigate back to Drive Pass screen or main screen
@@ -549,11 +546,9 @@ class _PurchaseDetailsScreenState extends State<PurchaseDetailsScreen> {
               onPressed: () {
                 Navigator.of(context).pop();
                 // Here you would navigate to card addition screen
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Card addition feature coming soon!'),
-                    backgroundColor: AppColors.primaryBlue,
-                  ),
+                SnackbarHelper.showInfoSnackBar(
+                  context,
+                  'Card addition feature coming soon!',
                 );
               },
               style: ElevatedButton.styleFrom(
