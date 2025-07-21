@@ -1,0 +1,725 @@
+import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:provider/provider.dart';
+import 'package:thirikkale_driver/core/provider/location_provider.dart';
+import 'package:thirikkale_driver/core/provider/driver_provider.dart';
+import 'package:thirikkale_driver/core/provider/ride_provider.dart';
+import 'package:thirikkale_driver/core/services/location_service.dart';
+import 'package:thirikkale_driver/core/services/map_service.dart';
+import 'package:thirikkale_driver/core/services/ride_request_service.dart';
+import 'package:thirikkale_driver/core/utils/app_dimensions.dart';
+import 'package:thirikkale_driver/core/utils/app_styles.dart';
+import 'package:thirikkale_driver/core/utils/navigation_utils.dart';
+import 'package:thirikkale_driver/core/utils/snackbar_helper.dart';
+import 'package:thirikkale_driver/features/home/widgets/driver_sidebar.dart';
+import 'package:thirikkale_driver/features/home/widgets/location_error.dart';
+import 'package:thirikkale_driver/features/home/widgets/location_search_widget.dart';
+import 'package:thirikkale_driver/features/home/widgets/ride_action_buttons.dart';
+// import 'package:thirikkale_driver/features/home/widgets/driver_status_widget.dart';
+// import 'package:thirikkale_driver/features/home/widgets/earnings_bottom_sheet.dart';
+import 'package:thirikkale_driver/features/home/widgets/sliding_go_button.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+class DriverHomeScreen extends StatefulWidget {
+  const DriverHomeScreen({super.key});
+
+  @override
+  State<DriverHomeScreen> createState() => _DriverHomeScreenState();
+}
+
+class _DriverHomeScreenState extends State<DriverHomeScreen> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  GoogleMapController? _mapController;
+  StreamSubscription<Position>? _locationSubscription;
+  bool _isMapReady = false;
+
+  // Map state
+  final Set<Marker> _markers = {};
+  final Set<Polyline> _polylines = {};
+
+  // Search state
+  String? _selectedDestination;
+  LatLng? _destinationLocation;
+
+  @override
+  void initState() {
+    super.initState();
+    // Defer location initialization to avoid setState during build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeLocation();
+    });
+  }
+
+  @override
+  void dispose() {
+    _locationSubscription?.cancel();
+    LocationService.stopWatchingLocation();
+    super.dispose();
+  }
+
+  Future<void> _initializeLocation() async {
+    final locationProvider = Provider.of<LocationProvider>(
+      context,
+      listen: false,
+    );
+    await locationProvider.getCurrentLocation();
+
+    if (!mounted) return;
+
+    if (locationProvider.locationError != null) {
+      // If there's an error, show the permission dialog.
+      _showLocationPermissionDialog();
+    } else if (locationProvider.currentLocation != null) {
+      // If successful, proceed with updating the map.
+      _updateCurrentLocationMarker();
+      _animateToCurrentLocation();
+      _startLocationTracking();
+    }
+  }
+
+  void _startLocationTracking() {
+    _locationSubscription = LocationService.watchLocation(
+      onLocationUpdate: (location) {
+        if (mounted) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            final locationProvider = Provider.of<LocationProvider>(
+              context,
+              listen: false,
+            );
+            locationProvider.updateCurrentLocation(location);
+            _updateCurrentLocationMarker();
+          });
+        }
+      },
+      onError: (error) {
+        if (mounted) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            SnackbarHelper.showErrorSnackBar(context, error);
+          });
+        }
+      },
+    );
+  }
+
+  void _updateCurrentLocationMarker() {
+    final locationProvider = Provider.of<LocationProvider>(
+      context,
+      listen: false,
+    );
+    final currentLocation = locationProvider.currentLocation;
+
+    if (currentLocation != null) {
+      final position = LatLng(
+        currentLocation['latitude'],
+        currentLocation['longitude'],
+      );
+
+      setState(() {
+        _markers.removeWhere(
+          (marker) => marker.markerId.value == 'current_location',
+        );
+        _markers.add(MapService.createCurrentLocationMarker(position));
+      });
+    }
+  }
+
+  void _animateToCurrentLocation() {
+    final locationProvider = Provider.of<LocationProvider>(
+      context,
+      listen: false,
+    );
+    final currentLocation = locationProvider.currentLocation;
+
+    if (_mapController != null && _isMapReady && currentLocation != null) {
+      final position = LatLng(
+        currentLocation['latitude'],
+        currentLocation['longitude'],
+      );
+
+      MapService.animateToPosition(_mapController!, position);
+    }
+  }
+
+  void _animateToShowBothLocations() {
+    final locationProvider = Provider.of<LocationProvider>(
+      context,
+      listen: false,
+    );
+    final currentLocation = locationProvider.currentLocation;
+
+    if (_mapController != null &&
+        _isMapReady &&
+        currentLocation != null &&
+        _destinationLocation != null) {
+      final currentPos = LatLng(
+        currentLocation['latitude'],
+        currentLocation['longitude'],
+      );
+
+      final bounds = MapService.calculateBounds(
+        currentPos,
+        _destinationLocation!,
+      );
+      MapService.animateToBounds(_mapController!, bounds);
+    }
+  }
+
+  void _onLocationSelected(String locationName, LatLng location) {
+    final locationProvider = Provider.of<LocationProvider>(
+      context,
+      listen: false,
+    );
+    final currentLocation = locationProvider.currentLocation;
+
+    setState(() {
+      _selectedDestination = locationName;
+      _destinationLocation = location;
+
+      // Add destination marker
+      _markers.removeWhere((marker) => marker.markerId.value == 'destination');
+      _markers.add(MapService.createDestinationMarker(location, locationName));
+
+      // Create polyline if current location exists
+      if (currentLocation != null) {
+        _createPolyline();
+      }
+    });
+
+    _animateToShowBothLocations();
+  }
+
+  void _createPolyline() async {
+    final locationProvider = Provider.of<LocationProvider>(
+      context,
+      listen: false,
+    );
+    final currentLocation = locationProvider.currentLocation;
+
+    if (currentLocation != null && _destinationLocation != null) {
+      final start = LatLng(
+        currentLocation['latitude'],
+        currentLocation['longitude'],
+      );
+
+      // Clear existing polylines
+      setState(() {
+        _polylines.clear();
+      });
+
+      // Get the route polyline from Directions API
+      final routePolyline = await MapService.createRoutePolyline(
+        start,
+        _destinationLocation!,
+      );
+
+      if (routePolyline != null && mounted) {
+        setState(() {
+          _polylines.add(routePolyline);
+        });
+      }
+    }
+  }
+
+  void _showLocationPermissionDialog() {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Location Permission Required'),
+            content: const Text(
+              'Please enable location permission to use the map features.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  Navigator.pop(context);
+                  await LocationService.openLocationSettings();
+                },
+                child: const Text('Settings'),
+              ),
+            ],
+          ),
+    );
+  }
+
+  void _toggleOnlineStatus() {
+    final driverProvider = Provider.of<DriverProvider>(context, listen: false);
+    driverProvider.toggleOnlineStatus();
+
+    if (driverProvider.isOnline) {
+      _showGoOnlineBottomSheet();
+    }
+  }
+
+  void _showGoOnlineBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const GoOnlineBottomSheet(),
+    );
+  }
+
+  // void _showEarningsBottomSheet() {
+  //   showModalBottomSheet(
+  //     context: context,
+  //     isScrollControlled: true,
+  //     backgroundColor: Colors.transparent,
+  //     builder: (context) => const EarningsBottomSheet(),
+  //   );
+  // }
+
+  LatLng _getDefaultLocation() {
+    const defaultLocation = LatLng(6.9271, 79.8612); // Colombo, Sri Lanka
+    return defaultLocation;
+  }
+
+  LatLng _getInitialCameraPosition() {
+    final locationProvider = Provider.of<LocationProvider>(
+      context,
+      listen: false,
+    );
+    final currentLocation = locationProvider.currentLocation;
+
+    if (currentLocation != null) {
+      return LatLng(currentLocation['latitude'], currentLocation['longitude']);
+    }
+
+    return _getDefaultLocation();
+  }
+
+  // Create ride routes
+  void _createRideRoutes() async {
+    final locationProvider = Provider.of<LocationProvider>(
+      context,
+      listen: false,
+    );
+    final rideProvider = Provider.of<RideProvider>(context, listen: false);
+
+    final currentLocation = locationProvider.currentLocation;
+    final rideRequest = rideProvider.currentRideRequest;
+
+    if (currentLocation != null && rideRequest != null) {
+      final driverLocation = LatLng(
+        currentLocation['latitude'],
+        currentLocation['longitude'],
+      );
+
+      // Clear existing markers and polylines
+      setState(() {
+        _markers.clear();
+        _polylines.clear();
+      });
+
+      // Add driver marker
+      _markers.add(MapService.createCurrentLocationMarker(driverLocation));
+
+      // Add pickup marker
+      _markers.add(
+        MapService.createPickupMarker(
+          rideRequest.pickupLocation,
+          rideRequest.pickupAddress,
+        ),
+      );
+
+      // Add destination marker
+      _markers.add(
+        MapService.createDropMarker(
+          rideRequest.destinationLocation,
+          rideRequest.destinationAddress,
+        ),
+      );
+
+      // Create route from driver to pickup
+      final driverToPickupRoute = await MapService.createDriverToPickupRoute(
+        driverLocation,
+        rideRequest.pickupLocation,
+      );
+
+      // Create route from pickup to destination
+      final pickupToDestinationRoute =
+          await MapService.createPickupToDestinationRoute(
+            rideRequest.pickupLocation,
+            rideRequest.destinationLocation,
+          );
+
+      if (mounted) {
+        setState(() {
+          if (driverToPickupRoute != null) {
+            _polylines.add(driverToPickupRoute);
+          }
+          if (pickupToDestinationRoute != null) {
+            _polylines.add(pickupToDestinationRoute);
+          }
+        });
+
+        // Animate to show all locations
+        if (_mapController != null && _isMapReady) {
+          final bounds = MapService.calculateRideBounds(
+            driverLocation,
+            rideRequest.pickupLocation,
+            rideRequest.destinationLocation,
+          );
+          MapService.animateToBounds(_mapController!, bounds, padding: 150);
+        }
+      }
+    }
+  }
+
+  // Rider pickup
+  void _navigateToPickup() async {
+    final rideProvider = Provider.of<RideProvider>(context, listen: false);
+    final rideRequest = rideProvider.currentRideRequest;
+
+    if (rideRequest != null) {
+      final url =
+          'google.navigation:q=${rideRequest.pickupLat},${rideRequest.pickupLng}';
+      final uri = Uri.parse(url);
+
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri);
+        rideProvider.startNavigation();
+      }
+    }
+  }
+
+   void _showTestRideRequest() {
+    final rideRequest = RideRequestService().generateDummyRideRequest();
+    RideRequestService().showRideRequest(context, rideRequest);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      key: _scaffoldKey,
+      drawer: const DriverSidebar(),
+      body: Consumer3<LocationProvider, DriverProvider, RideProvider>(
+        builder: (
+          context,
+          locationProvider,
+          driverProvider,
+          rideProvider,
+          child,
+        ) {
+          final currentLocationMap = locationProvider.currentLocation;
+          final LatLng? currentUserPosition =
+              currentLocationMap != null
+                  ? LatLng(
+                    currentLocationMap['latitude'],
+                    currentLocationMap['longitude'],
+                  )
+                  : null;
+
+          // Listen to ride provider changes
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (rideProvider.isRideAccepted) {
+              _createRideRoutes();
+            }
+          });
+
+          return Stack(
+            children: [
+              // Google Map
+              locationProvider.isLoadingCurrentLocation
+                  ? const Center(child: CircularProgressIndicator())
+                  : GoogleMap(
+                    onMapCreated: (GoogleMapController controller) {
+                      _mapController = controller;
+                      _isMapReady = true;
+
+                      // Use addPostFrameCallback to avoid calling during build
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (locationProvider.currentLocation != null) {
+                          _animateToCurrentLocation();
+                        }
+                      });
+                    },
+                    initialCameraPosition: CameraPosition(
+                      target: _getInitialCameraPosition(),
+                      zoom: 14.0, // Zoom in for more street-level detail
+                    ),
+                    markers: _markers,
+                    polylines: _polylines,
+                    myLocationEnabled:
+                        true, // Disable default location dot since we have custom marker
+                    myLocationButtonEnabled: false,
+                    mapType: MapType.normal,
+                    zoomControlsEnabled: false,
+                    compassEnabled: true,
+                    rotateGesturesEnabled: true,
+                    scrollGesturesEnabled: true,
+                    tiltGesturesEnabled: true,
+                    zoomGesturesEnabled: true,
+                    mapToolbarEnabled: false,
+                    trafficEnabled: false, // Can be enabled if needed
+                  ),
+
+              // Top overlay with search and menu
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withOpacity(0.7),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                  child: SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.all(
+                        AppDimensions.pageHorizontalPadding,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              // Menu button
+                              GestureDetector(
+                                onTap:
+                                    () =>
+                                        _scaffoldKey.currentState?.openDrawer(),
+                                child: Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.1),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Icon(
+                                    Icons.menu,
+                                    color: AppColors.textPrimary,
+                                    size: 24,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              // Search bar
+                              Expanded(
+                                child: LocationSearchWidget(
+                                  onLocationSelected: _onLocationSelected,
+                                  currentUserLocation: currentUserPosition,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              // Test button (remove in production)
+              Positioned(
+                top: MediaQuery.of(context).padding.top + 100,
+                left: AppDimensions.pageHorizontalPadding,
+                child: FloatingActionButton(
+                  heroTag: "test_ride_request",
+                  backgroundColor: AppColors.success,
+                  onPressed: _showTestRideRequest,
+                  child: const Icon(
+                    Icons.notification_add,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+
+              // Ride action buttons (shown when ride is accepted)
+              if (rideProvider.isRideAccepted)
+                Positioned(
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  child: RideActionButtons(
+                    rideRequest: rideProvider.currentRideRequest!,
+                    onNavigate: _navigateToPickup,
+                    onArrived: () => rideProvider.arriveAtPickup(),
+                    onStartRide: () => rideProvider.startRide(),
+                    onCompleteRide: () => rideProvider.completeRide(),
+                    isEnRouteToPickup:
+                        rideProvider.rideStatus == RideStatus.enRouteToPickup,
+                    isAtPickup:
+                        rideProvider.rideStatus == RideStatus.arrivedAtPickup,
+                    isRideStarted:
+                        rideProvider.rideStatus == RideStatus.rideStarted,
+                  ),
+                ),
+
+              // Navigate button (shows when destination is selected)
+              if (_selectedDestination != null)
+                Positioned(
+                  bottom: MediaQuery.of(context).padding.bottom + 200,
+                  left: AppDimensions.pageHorizontalPadding,
+                  child: ElevatedButton.icon(
+                    onPressed: _launchNavigation,
+                    icon: const Icon(Icons.navigation, color: Colors.white),
+                    label: const Text(
+                      'Navigate',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryBlue,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                    ),
+                  ),
+                ),
+
+              // // Driver status widget (top right)
+              // Positioned(
+              //   top: MediaQuery.of(context).padding.top + 80,
+              //   right: AppDimensions.pageHorizontalPadding,
+              //   child: DriverStatusWidget(
+              //     isOnline: driverProvider.isOnline,
+              //     onTap: _showEarningsBottomSheet,
+              //   ),
+              // ),
+
+              // Go online/offline button (bottom center)
+              Positioned(
+                bottom: 100,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: SlidingGoButton(
+                    isOnline: driverProvider.isOnline,
+                    onToggle: _toggleOnlineStatus,
+                  ),
+                ),
+              ),
+
+              // Current location button
+              Positioned(
+                bottom: MediaQuery.of(context).padding.bottom + 200,
+                right: AppDimensions.pageHorizontalPadding,
+                child: FloatingActionButton(
+                  backgroundColor: AppColors.white,
+                  onPressed: _animateToCurrentLocation,
+                  child: const Icon(
+                    Icons.my_location,
+                    color: AppColors.primaryBlue,
+                    size: 30,
+                  ),
+                ),
+              ),
+
+              // Error message for location
+              if (locationProvider.locationError != null)
+                Positioned(
+                  bottom: 300,
+                  left: 0,
+                  right: 0,
+                  child: LocationErrorWidget(
+                    errorMessage: locationProvider.locationError,
+                    onRetry: () async {
+                      await locationProvider.getCurrentLocation();
+                    },
+                  ),
+                ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _launchNavigation() async {
+    if (_destinationLocation != null) {
+      await NavigationUtils.launchGoogleMapsNavigation(
+        destinationLat: _destinationLocation!.latitude,
+        destinationLng: _destinationLocation!.longitude,
+        destinationName: _selectedDestination,
+      );
+    }
+  }
+}
+
+// Go Online Bottom Sheet
+class GoOnlineBottomSheet extends StatelessWidget {
+  const GoOnlineBottomSheet({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(20),
+          topRight: Radius.circular(20),
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 40,
+            height: 4,
+            margin: const EdgeInsets.only(top: 12, bottom: 20),
+            decoration: BoxDecoration(
+              color: AppColors.lightGrey,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppDimensions.pageHorizontalPadding,
+            ),
+            child: Column(
+              children: [
+                const Icon(
+                  Icons.check_circle,
+                  color: AppColors.success,
+                  size: 64,
+                ),
+                const SizedBox(height: 16),
+                Text('You\'re now online!', style: AppTextStyles.heading2),
+                const SizedBox(height: 8),
+                Text(
+                  'You\'ll start receiving ride requests from nearby passengers.',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 32),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: AppButtonStyles.primaryButton,
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Got it'),
+                  ),
+                ),
+                const SizedBox(height: 32),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
