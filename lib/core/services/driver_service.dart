@@ -529,4 +529,52 @@ class DriverService {
       return {'success': false, 'error': 'Failed to fetch document status: $e'};
     }
   }
+
+  // Update vehicle type for a driver
+  Future<Map<String, dynamic>> updateVehicleType(
+    String driverId,
+    String vehicleType,
+    String accessToken,
+  ) async {
+    try {
+      print('🚗 Updating vehicle type for driver: $driverId to: $vehicleType');
+
+      final requestBody = {'vehicleType': vehicleType};
+
+      final response = await http
+          .put(
+            Uri.parse(ApiConfig.updateVehicleType(driverId)),
+            headers: {
+              ...ApiConfig.defaultHeaders,
+              'Authorization': 'Bearer $accessToken',
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode(requestBody),
+          )
+          .timeout(const Duration(seconds: 30));
+
+      print('📨 Vehicle type update response status: ${response.statusCode}');
+      print('🚗 Vehicle type update response body: ${response.body}');
+
+      final responseData = jsonDecode(response.body);
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return {
+          'success': true,
+          'message':
+              responseData['message'] ?? 'Vehicle type updated successfully',
+          'data': responseData['data'] ?? responseData,
+        };
+      } else {
+        return {
+          'success': false,
+          'error': responseData['message'] ?? 'Failed to update vehicle type',
+          'statusCode': response.statusCode,
+        };
+      }
+    } catch (e) {
+      print('❌ Vehicle type update error: $e');
+      return {'success': false, 'error': 'Failed to update vehicle type: $e'};
+    }
+  }
 }

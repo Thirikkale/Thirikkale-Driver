@@ -477,6 +477,65 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  // Update vehicle type for the current driver
+  Future<bool> updateVehicleType(String vehicleType) async {
+    try {
+      // Make sure we have an access token and user ID
+      if (_accessToken == null || _accessToken!.isEmpty) {
+        throw Exception('No access token available');
+      }
+
+      if (_userId == null || _userId!.isEmpty) {
+        throw Exception('No user ID available');
+      }
+
+      _setLoading(true);
+
+      // Call the driver service method
+      final result = await _driverService.updateVehicleType(
+        _userId!,
+        vehicleType,
+        _accessToken!,
+      );
+
+      if (result['success'] == true) {
+        // Update local vehicle type
+        _selectedVehicleType = vehicleType;
+
+        print('✅ Vehicle type updated successfully to: $vehicleType');
+
+        // Notify listeners about the change
+        notifyListeners();
+
+        return true;
+      } else {
+        print('❌ Failed to update vehicle type: ${result['error']}');
+        _setError(result['error'] ?? 'Failed to update vehicle type');
+        return false;
+      }
+    } catch (e) {
+      print('❌ Error in AuthProvider.updateVehicleType: $e');
+      _setError('Failed to update vehicle type');
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Helper method to update vehicle type and sync with backend
+  Future<void> setAndUpdateVehicleType(String vehicleType) async {
+    // First set it locally (for immediate UI update)
+    setVehicleType(vehicleType);
+
+    // Then sync with backend
+    final success = await updateVehicleType(vehicleType);
+
+    if (!success) {
+      // If backend update failed, you might want to revert or show error
+      print('⚠️ Vehicle type set locally but failed to sync with backend');
+    }
+  }
+
   // Store JWT tokens with persistence
   Future<void> _storeJWTTokens(Map<String, dynamic> data) async {
     try {

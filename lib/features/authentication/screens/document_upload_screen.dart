@@ -241,6 +241,91 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
     }
   }
 
+  // Maps vehicle types to backend
+  String _mapVehicleTypeForBackend(String displayName) {
+    switch (displayName) {
+      case 'Tuk':
+        return 'TUK';
+      case 'Ride':
+        return 'RIDE';
+      case 'Rush':
+        return 'RUSH';
+      case 'Prime Ride':
+        return 'PRIME_RIDE';
+      case 'Squad':
+        return 'SQUAD';
+      default:
+        return 'OTHER';
+    }
+  }
+
+  Future<void> _handleVehicleTypeChange(VehicleType? newVehicle) async {
+    if (newVehicle == null || newVehicle == _selectedVehicle) return;
+
+    setState(() {
+      _selectedVehicle = newVehicle;
+    });
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final backendVehicleType = _mapVehicleTypeForBackend(newVehicle.name);
+
+    try {
+      if (_isDriverRegistered) {
+        // Driver is already registered, update both locally and on backend
+        debugPrint(
+          '🚗 Updating vehicle type for registered driver: $backendVehicleType',
+        );
+
+        final success = await authProvider.updateVehicleType(
+          backendVehicleType,
+        );
+
+        if (!mounted) return;
+
+        if (success) {
+          SnackbarHelper.showSuccessSnackBar(
+            context,
+            'Vehicle type updated to $backendVehicleType',
+          );
+        } else {
+          // Show error if backend update failed
+          SnackbarHelper.showErrorSnackBar(
+            context,
+            authProvider.errorMessage ??
+                'Failed to update vehicle type. Please try again.',
+          );
+
+          // Optionally revert the UI change if backend update failed
+          // setState(() {
+          //   _selectedVehicle = _previousSelectedVehicle;
+          // });
+        }
+      } else {
+        // Driver is not registered yet, just set locally
+        debugPrint(
+          '🚗 Setting vehicle type locally for unregistered driver: $backendVehicleType',
+        );
+        authProvider.setVehicleType(backendVehicleType);
+
+        if (mounted) {
+          SnackbarHelper.showSuccessSnackBar(
+            context,
+            'Vehicle type set to $backendVehicleType',
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Error handling vehicle type change: $e');
+
+      if (mounted) {
+        SnackbarHelper.showErrorSnackBar(
+          context,
+          'Failed to update vehicle type. Please try again.',
+        );
+      }
+    }
+  }
+
   int get _completedSteps => _documents.where((d) => d.isCompleted).length;
   bool get _allStepsCompleted => _completedSteps == _documents.length;
 
@@ -291,19 +376,9 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
                 child: VehicleTypeSelector(
                   selectedVehicle: _selectedVehicle,
                   vehicleTypes: _vehicleTypes,
-                  onChanged: (newValue) {
-                    if (newValue != null) {
-                      setState(() {
-                        _selectedVehicle = newValue;
-                      });
-                      // Update vehicle type in provider
-                      final authProvider = Provider.of<AuthProvider>(
-                        context,
-                        listen: false,
-                      );
-                      authProvider.setVehicleType(newValue.name);
-                    }
-                  },
+                  onChanged:
+                      (VehicleType? newVehicle) =>
+                          _handleVehicleTypeChange(newVehicle),
                 ),
               ),
               const SizedBox(height: 24),
