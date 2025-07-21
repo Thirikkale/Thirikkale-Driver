@@ -45,6 +45,8 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
   late final List<VehicleType> _vehicleTypes;
   late VehicleType _selectedVehicle;
   bool _isDriverRegistered = false;
+  // ignore: unused_field
+  bool _isLoadingDocumentStatus = false;
 
   @override
   void initState() {
@@ -89,15 +91,115 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
 
       if (authProvider.isLoggedIn && authProvider.userId != null) {
         // User is already logged in (auto-login scenario)
+        print('✅ User already logged in, loading document status');
         setState(() {
           _isDriverRegistered = true;
         });
-        print('✅ User already logged in, ready for document upload');
+
+        // Load existing document status from backend
+        _loadDocumentStatus();
       } else {
         // New user, complete registration
+        print('🆕 New user, completing registration');
         _registerDriverWithBackend();
       }
     });
+  }
+
+  Future<void> _loadDocumentStatus() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+    if (authProvider.userId == null) {
+      print('❌ No user ID available for document status check');
+      return;
+    }
+
+    setState(() {
+      _isLoadingDocumentStatus = true;
+    });
+
+    try {
+      final documentStatus = await authProvider.getDocumentStatus(
+        authProvider.userId!,
+      );
+
+      if (!mounted) return;
+
+      // Update document completion status based on backend response
+      _updateDocumentCompletionStatus(documentStatus);
+    } catch (e) {
+      print('❌ Error loading document status: $e');
+      // Don't show error to user as this is background loading
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingDocumentStatus = false;
+        });
+      }
+    }
+  }
+
+  void _updateDocumentCompletionStatus(Map<String, dynamic> documentStatus) {
+    setState(() {
+      // Check if documents field exists and extract it
+      final documents = documentStatus['documents'] as Map<String, dynamic>?;
+
+      if (documents == null) {
+        print('❌ No documents field found in response');
+        return;
+      }
+
+      for (int i = 0; i < _documents.length; i++) {
+        final document = _documents[i];
+        bool isCompleted = false;
+
+        // Map document titles to backend field names
+        switch (document.title) {
+          case 'Profile Picture':
+            // Check for both 'selfie' and 'profilePicture' as possible field names
+            final selfieDoc = documents['selfie'] as Map<String, dynamic>?;
+            final profileDoc =
+                documents['profilePicture'] as Map<String, dynamic>?;
+            isCompleted =
+                (selfieDoc?['uploaded'] == true) ||
+                (profileDoc?['uploaded'] == true);
+            break;
+          case 'Driving License':
+            final drivingLicenseDoc =
+                documents['drivingLicense'] as Map<String, dynamic>?;
+            isCompleted = drivingLicenseDoc?['uploaded'] == true;
+            break;
+          case 'Revenue License':
+            final revenueLicenseDoc =
+                documents['revenueLicense'] as Map<String, dynamic>?;
+            isCompleted = revenueLicenseDoc?['uploaded'] == true;
+            break;
+          case 'Vehicle Registration':
+            final vehicleRegDoc =
+                documents['vehicleRegistration'] as Map<String, dynamic>?;
+            isCompleted = vehicleRegDoc?['uploaded'] == true;
+            break;
+          case 'Vehicle Insurance':
+            final vehicleInsDoc =
+                documents['vehicleInsurance'] as Map<String, dynamic>?;
+            isCompleted = vehicleInsDoc?['uploaded'] == true;
+            break;
+        }
+
+        _documents[i].isCompleted = isCompleted;
+      }
+    });
+
+    // Log completion status for debugging
+    final completedCount = _documents.where((d) => d.isCompleted).length;
+    print(
+      '📄 Documents loaded: $completedCount/${_documents.length} completed',
+    );
+
+    // Log individual document status for debugging
+    for (final doc in _documents) {
+      print('📄 ${doc.title}: ${doc.isCompleted ? "✅" : "❌"}');
+    }
   }
 
   Future<void> _registerDriverWithBackend() async {
@@ -242,6 +344,7 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
                       document: _documents[index],
                       onTap: () {},
                       onDocumentCompleted: _markDocumentAsCompleted,
+                      onRefreshStatus: _loadDocumentStatus,
                     );
                   },
                 ),

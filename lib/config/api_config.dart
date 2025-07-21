@@ -33,6 +33,10 @@ class ApiConfig {
   static String updateDriverProfile(String driverId) =>
       '$driversBaseUrl/$driverId/profile';
 
+  // Set Vehicle Type
+  static String updateVehicleType(String driverId) =>
+      '$driversBaseUrl/$driverId/vehicle-type';
+
   // Document Upload Endpoints
   static String uploadSelfie(String driverId) =>
       '$driversBaseUrl/$driverId/documents/selfie';

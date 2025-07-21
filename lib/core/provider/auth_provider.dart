@@ -347,6 +347,34 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  Future<Map<String, dynamic>> getDocumentStatus(String driverId) async {
+    try {
+      // Make sure we have an access token
+      if (_accessToken == null || _accessToken!.isEmpty) {
+        throw Exception('No access token available');
+      }
+
+      // Call the AuthService method
+      final result = await _driverService.getDocumentStatus(
+        driverId,
+        _accessToken!,
+      );
+
+      if (result['success'] == true) {
+        print('✅ Document status fetched successfully');
+        return result['data'] ?? {};
+      } else {
+        print('❌ Failed to fetch document status: ${result['error']}');
+        throw Exception(result['error'] ?? 'Failed to fetch document status');
+      }
+    } catch (e) {
+      print('❌ Error in AuthProvider.getDocumentStatus: $e');
+      // Set error message for UI
+      _setError('Failed to load document status');
+      rethrow;
+    }
+  }
+
   // Update existing registration method for completing new user registration
   Future<bool> completeDriverRegistration() async {
     if (_idToken == null ||

@@ -485,4 +485,48 @@ class DriverService {
       };
     }
   }
+
+  // Get document status for a driver
+  Future<Map<String, dynamic>> getDocumentStatus(
+    String driverId,
+    String accessToken,
+  ) async {
+    try {
+      print('📄 Fetching document status for driver: $driverId');
+
+      final response = await http
+          .get(
+            Uri.parse(ApiConfig.getDocumentStatus(driverId)),
+            headers: {
+              ...ApiConfig.defaultHeaders,
+              'Authorization': 'Bearer $accessToken',
+            },
+          )
+          .timeout(const Duration(seconds: 30));
+
+      print('📨 Document status response status: ${response.statusCode}');
+      print('📄 Document status response body: ${response.body}');
+
+      final responseData = jsonDecode(response.body);
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        // Return the document status data
+        return {
+          'success': true,
+          'data':
+              responseData['data'] ??
+              responseData, // Handle different response structures
+        };
+      } else {
+        return {
+          'success': false,
+          'error': responseData['message'] ?? 'Failed to fetch document status',
+          'statusCode': response.statusCode,
+        };
+      }
+    } catch (e) {
+      print('❌ Document status fetch error: $e');
+      return {'success': false, 'error': 'Failed to fetch document status: $e'};
+    }
+  }
 }
