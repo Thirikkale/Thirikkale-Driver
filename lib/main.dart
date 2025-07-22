@@ -10,8 +10,20 @@ import 'package:thirikkale_driver/core/utils/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await EnvConfig.loadEnv();
-  await Firebase.initializeApp();
+
+  // Add error handling to prevent crashes
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+  };
+
+  try {
+    await EnvConfig.loadEnv();
+    await Firebase.initializeApp();
+  } catch (e) {
+    print('Initialization error: $e');
+    // Continue anyway to prevent complete app failure
+  }
+
   runApp(const ThirikkaleDriverApp());
 }
 

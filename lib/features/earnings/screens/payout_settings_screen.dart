@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:thirikkale_driver/core/utils/app_styles.dart';
 import 'package:thirikkale_driver/core/utils/app_dimensions.dart';
+import 'package:thirikkale_driver/widgets/common/custom_appbar_name.dart';
+import 'package:thirikkale_driver/features/earnings/widgets/earnings_navigation_panel.dart';
 
 class PayoutSettingsScreen extends StatefulWidget {
   const PayoutSettingsScreen({super.key});
@@ -17,18 +19,7 @@ class _PayoutSettingsScreenState extends State<PayoutSettingsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.surfaceLight,
-      appBar: AppBar(
-        backgroundColor: AppColors.white,
-        elevation: 0,
-        leading: IconButton(
-          onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
-        ),
-        title: Text(
-          'Payout Settings',
-          style: AppTextStyles.heading3.copyWith(color: AppColors.textPrimary),
-        ),
-      ),
+      appBar: _buildAppBar(),
       body: SingleChildScrollView(
         child: Column(
           children: [
@@ -39,6 +30,19 @@ class _PayoutSettingsScreenState extends State<PayoutSettingsScreen> {
           ],
         ),
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => EarningsNavigationPanel.show(context),
+        backgroundColor: AppColors.primaryBlue,
+        child: const Icon(Icons.account_balance_wallet, color: AppColors.white),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+    );
+  }
+
+  PreferredSizeWidget _buildAppBar() {
+    return const CustomAppbarName(
+      title: 'Payout Settings',
+      showBackButton: true,
     );
   }
 

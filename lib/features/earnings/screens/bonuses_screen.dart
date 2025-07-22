@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:thirikkale_driver/core/utils/app_dimensions.dart';
 import 'package:thirikkale_driver/core/utils/app_styles.dart';
 import 'package:thirikkale_driver/widgets/common/custom_appbar_name.dart';
+import 'package:thirikkale_driver/features/earnings/widgets/earnings_navigation_panel.dart';
 
 class BonusesScreen extends StatefulWidget {
   const BonusesScreen({super.key});
@@ -31,6 +32,12 @@ class _BonusesScreenState extends State<BonusesScreen> {
           Expanded(child: _buildBonusList()),
         ],
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => EarningsNavigationPanel.show(context),
+        backgroundColor: AppColors.primaryBlue,
+        child: const Icon(Icons.star, color: AppColors.white),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:thirikkale_driver/core/utils/app_styles.dart';
+import 'package:thirikkale_driver/config/routes.dart';
 
 class EarningsNavigationPanel {
   static void show(BuildContext context) {
@@ -55,15 +56,15 @@ class EarningsNavigationPanel {
                       children: [
                         _buildNavigationItem(
                           context,
-                          icon: Icons.analytics,
-                          title: 'Earnings Analytics',
-                          subtitle: 'View detailed insights and trends',
+                          icon: Icons.dashboard,
+                          title: 'Earnings Overview',
+                          subtitle: 'View earnings summary and insights',
                           onTap: () {
                             Navigator.pop(context);
                             if (context.mounted) {
                               Navigator.pushNamed(
                                 context,
-                                '/earnings-analytics',
+                                AppRoutes.earningsOverview,
                               );
                             }
                           },
@@ -76,7 +77,22 @@ class EarningsNavigationPanel {
                           onTap: () {
                             Navigator.pop(context);
                             if (context.mounted) {
-                              Navigator.pushNamed(context, '/earnings-history');
+                              Navigator.pushNamed(
+                                context,
+                                AppRoutes.earningsHistory,
+                              );
+                            }
+                          },
+                        ),
+                        _buildNavigationItem(
+                          context,
+                          icon: Icons.route,
+                          title: 'Trip Payments',
+                          subtitle: 'View detailed trip history',
+                          onTap: () {
+                            Navigator.pop(context);
+                            if (context.mounted) {
+                              Navigator.pushNamed(context, AppRoutes.trips);
                             }
                           },
                         ),
@@ -88,7 +104,10 @@ class EarningsNavigationPanel {
                           onTap: () {
                             Navigator.pop(context);
                             if (context.mounted) {
-                              Navigator.pushNamed(context, '/payout-settings');
+                              Navigator.pushNamed(
+                                context,
+                                AppRoutes.payoutSettings,
+                              );
                             }
                           },
                         ),

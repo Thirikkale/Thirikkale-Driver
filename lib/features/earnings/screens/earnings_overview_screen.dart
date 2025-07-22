@@ -159,7 +159,7 @@ class _EarningsOverviewScreenState extends State<EarningsOverviewScreen> {
               ),
               const SizedBox(width: 12),
               Text(
-                'Earnings Breakdown ($_selectedPeriod)',
+                'Earnings Breakdown',
                 style: AppTextStyles.heading3.copyWith(
                   fontWeight: FontWeight.w700,
                   color: AppColors.textPrimary,
