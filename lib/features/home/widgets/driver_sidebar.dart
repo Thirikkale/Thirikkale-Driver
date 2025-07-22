@@ -144,7 +144,7 @@ class DriverSidebar extends StatelessWidget {
                   onTap: () => _navigateToTripHistory(context),
                 ),
                 _buildMenuItem(
-                  icon: Icons.account_balance_wallet,
+                  icon: Icons.monetization_on,
                   title: 'Earnings',
                   onTap: () => _navigateToEarnings(context),
                 ),
@@ -173,11 +173,11 @@ class DriverSidebar extends StatelessWidget {
                   title: 'Support',
                   onTap: () => _navigateToSupport(context),
                 ),
-                _buildMenuItem(
-                  icon: Icons.settings,
-                  title: 'Settings',
-                  onTap: () => _navigateToSettings(context),
-                ),
+                // _buildMenuItem(
+                //   icon: Icons.settings,
+                //   title: 'Settings',
+                //   onTap: () => _navigateToSettings(context),
+                // ),
                 const Divider(),
                 _buildMenuItem(
                   icon: Icons.info_outline,
@@ -332,11 +332,11 @@ class DriverSidebar extends StatelessWidget {
     );
   }
 
-  void _navigateToSettings(BuildContext context) {
-    Navigator.pop(context);
-    // Navigate to settings screen
-    print('Navigate to Settings');
-  }
+  // void _navigateToSettings(BuildContext context) {
+  //   Navigator.pop(context);
+  //   // Navigate to settings screen
+  //   print('Navigate to Settings');
+  // }
 
   void _showAboutDialog(BuildContext context) {
     Navigator.pop(context);
