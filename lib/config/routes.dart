@@ -7,6 +7,10 @@ import 'package:thirikkale_driver/features/home/screens/driver_home_screen.dart'
 import 'package:thirikkale_driver/features/drivepass/screens/drive_pass_screen.dart';
 import 'package:thirikkale_driver/features/drivepass/screens/drive_pass_history_screen.dart';
 import 'package:thirikkale_driver/features/reviewrate/screens/reviews_screen.dart';
+import 'package:thirikkale_driver/features/earnings/screens/earnings_overview_screen.dart';
+import 'package:thirikkale_driver/features/earnings/screens/earnings_history_screen.dart';
+import 'package:thirikkale_driver/features/earnings/screens/payout_settings_screen.dart';
+import 'package:thirikkale_driver/features/earnings/screens/earnings_analytics_screen.dart';
 
 class AppRoutes {
   static const String initial = '/';
@@ -18,6 +22,10 @@ class AppRoutes {
   static const String drivePassHistory = '/drive-pass-history';
   static const String reviews = '/reviews';
   static const String writeReview = '/write-review';
+  static const String earningsOverview = '/earnings-overview';
+  static const String earningsHistory = '/earnings-history';
+  static const String payoutSettings = '/payout-settings';
+  static const String earningsAnalytics = '/earnings-analytics';
 
   static Map<String, WidgetBuilder> getRoutes() {
     return {
@@ -30,6 +38,10 @@ class AppRoutes {
       drivePass: (context) => const DrivePassScreen(),
       drivePassHistory: (context) => const DrivePassHistoryScreen(),
       reviews: (context) => const ReviewsScreen(),
+      earningsOverview: (context) => const EarningsOverviewScreen(),
+      earningsHistory: (context) => const EarningsHistoryScreen(),
+      payoutSettings: (context) => const PayoutSettingsScreen(),
+      earningsAnalytics: (context) => const EarningsAnalyticsScreen(),
     };
   }
 }

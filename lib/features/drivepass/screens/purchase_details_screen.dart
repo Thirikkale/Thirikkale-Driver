@@ -248,8 +248,9 @@ class _PurchaseDetailsScreenState extends State<PurchaseDetailsScreen> {
                                   } else {
                                     setState(() {
                                       selectedPaymentMethodIndex = value;
-                                      if (!isCardOption)
+                                      if (!isCardOption) {
                                         selectedCardInfo = null;
+                                      }
                                     });
                                   }
                                 },

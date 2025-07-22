@@ -304,7 +304,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                               ),
                             ),
                           )
-                          .toList(),
+                          ,
                       const SizedBox(height: 100), // Space at bottom
                     ],
                   ),
