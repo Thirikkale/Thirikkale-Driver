@@ -3,6 +3,7 @@ import 'package:thirikkale_driver/core/utils/app_dimensions.dart';
 import 'package:thirikkale_driver/core/utils/app_styles.dart';
 import 'package:thirikkale_driver/core/utils/snackbar_helper.dart';
 import 'package:thirikkale_driver/core/utils/bottom_sheet_helper.dart';
+import 'package:thirikkale_driver/widgets/common/custom_appbar_name.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class SupportScreen extends StatelessWidget {
@@ -11,15 +12,7 @@ class SupportScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Support & Help',
-          style: AppTextStyles.heading3.copyWith(color: AppColors.white),
-        ),
-        backgroundColor: AppColors.primaryBlue,
-        foregroundColor: AppColors.white,
-        elevation: 0,
-      ),
+      appBar: CustomAppbarName(title: 'Support & Help', showBackButton: true,),
       backgroundColor: AppColors.background,
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(AppDimensions.pageHorizontalPadding),
