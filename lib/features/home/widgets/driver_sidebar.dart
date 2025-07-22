@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:thirikkale_driver/core/utils/app_dimensions.dart';
 import 'package:thirikkale_driver/core/utils/app_styles.dart';
 import 'package:thirikkale_driver/features/trip_history/screens/trip_history_screen.dart';
-import 'package:thirikkale_driver/features/ratings_reviews/screens/ratings_screen.dart';
 
 class DriverSidebar extends StatelessWidget {
   const DriverSidebar({super.key});
