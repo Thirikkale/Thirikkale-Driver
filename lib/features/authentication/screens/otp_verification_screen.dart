@@ -8,6 +8,7 @@ import 'package:thirikkale_driver/features/authentication/screens/document_uploa
 import 'package:thirikkale_driver/features/authentication/screens/name_registration_screen.dart';
 import 'package:thirikkale_driver/features/authentication/widgets/otp_input_row.dart';
 import 'package:thirikkale_driver/features/authentication/widgets/sign_navigation_button_row.dart';
+import 'package:thirikkale_driver/features/home/screens/driver_home_screen.dart';
 import 'package:thirikkale_driver/widgets/common/custom_appbar.dart';
 import 'package:thirikkale_driver/widgets/custom_modern_loading_overlay.dart';
 
@@ -136,34 +137,79 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 
       if (statusResult['success'] == true) {
         if (statusResult['isAutoLogin'] == true) {
-          // Existing user with complete profile
+          // Existing user with complete profile - check document status
           final firstName = authProvider.firstName ?? 'Driver';
+          final userId = authProvider.userId;
 
-          SnackbarHelper.showSuccessSnackBar(
-            context,
-            'Welcome back, $firstName!',
-          );
+          if (userId != null) {
+            try {
+              // Check document upload status
+              final documentStatus = await authProvider.getDocumentStatus(
+                userId,
+              );
 
-          Navigator.of(context).pushAndRemoveUntil(
-            NoAnimationPageRoute(
-              builder: (context) => DocumentUploadScreen(firstName: firstName),
-            ),
-            (route) => false,
-          );
+              if (!mounted) return;
+
+              // Check if all documents are uploaded
+              if (documentStatus['isDocumentsUploaded'] == true) {
+                // All documents uploaded - redirect to DriverHomeScreen
+                SnackbarHelper.showSuccessSnackBar(
+                  context,
+                  'Welcome back, $firstName! Ready to drive.',
+                );
+                Navigator.of(context).pushAndRemoveUntil(
+                  NoAnimationPageRoute(
+                    builder: (context) => const DriverHomeScreen(),
+                  ),
+                  (route) => false,
+                );
+              } else {
+                // Documents not complete - redirect to DocumentUploadScreen
+                SnackbarHelper.showSuccessSnackBar(
+                  context,
+                  'Welcome back, $firstName!',
+                );
+                Navigator.of(context).pushAndRemoveUntil(
+                  NoAnimationPageRoute(
+                    builder:
+                        (context) => DocumentUploadScreen(firstName: firstName),
+                  ),
+                  (route) => false,
+                );
+              }
+            } catch (e) {
+              // Error fetching document status - default to DocumentUploadScreen
+              print('❌ Error checking document status: $e');
+              SnackbarHelper.showSuccessSnackBar(
+                context,
+                'Welcome back, $firstName!',
+              );
+              Navigator.of(context).pushAndRemoveUntil(
+                NoAnimationPageRoute(
+                  builder:
+                      (context) => DocumentUploadScreen(firstName: firstName),
+                ),
+                (route) => false,
+              );
+            }
+          } else {
+            // No userId available - something went wrong
+            SnackbarHelper.showErrorSnackBar(
+              context,
+              'Unable to verify user information. Please try again.',
+            );
+          }
         } else {
           // New user OR existing user without complete profile
           final hasCompleteProfile = statusResult['hasCompleteProfile'] == true;
-
           if (hasCompleteProfile) {
             // User has names but might need to complete other steps
             print("\n\n\n6Inside of the Has Complete Profile\n");
             final firstName = authProvider.firstName ?? 'Driver';
-
             SnackbarHelper.showSuccessSnackBar(
               context,
               'Welcome back, $firstName!',
             );
-
             Navigator.of(context).push(
               NoAnimationPageRoute(
                 builder:
@@ -176,7 +222,6 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
               context,
               'Phone verified successfully!',
             );
-
             Navigator.of(context).push(
               NoAnimationPageRoute(
                 builder: (context) => const NameRegistrationScreen(),
