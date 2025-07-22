@@ -169,18 +169,14 @@ class _DocumentUploadScreenState extends State<AddNewVehicle> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CustomAppBar(
-        centerWidget: Image.asset(
-          'assets/icons/thirikkale_driver_appbar_logo.png',
-          height: 50.0,
-        ),
-      ),
+      appBar: CustomAppbarName(title: "Add Another Vehicle", showBackButton: true),
 
       body: Padding(
         padding: const EdgeInsets.only(bottom:24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            SizedBox(height: AppDimensions.sectionSpacing),
             Padding(
               padding: const EdgeInsets.symmetric(
                 horizontal: AppDimensions.pageHorizontalPadding,

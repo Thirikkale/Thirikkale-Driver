@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:thirikkale_driver/widgets/common/custom_input_field_label.dart';
+import 'package:thirikkale_driver/widgets/common/custom_appbar_name.dart';
 
 class TransactionSummary extends StatelessWidget {
   const TransactionSummary({super.key});

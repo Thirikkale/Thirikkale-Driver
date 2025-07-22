@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:thirikkale_driver/core/utils/app_dimensions.dart';
 import 'package:thirikkale_driver/core/utils/app_styles.dart';
 import 'package:thirikkale_driver/features/vehicle_details/manage_vehicles.dart';
-import 'package:thirikkale_driver/widgets/common/custom_appbar.dart';
+import 'package:thirikkale_driver/widgets/common/custom_appbar_name.dart';
 
 class CurrentVehicle extends StatelessWidget {
 
@@ -19,12 +20,7 @@ class CurrentVehicle extends StatelessWidget {
   Widget build(BuildContext context) {
 
     return Scaffold(
-      appBar: CustomAppBar(
-        centerWidget: Image.asset(
-          'assets/icons/thirikkale_driver_appbar_logo.png',
-          height: 50.0,
-        ),
-      ),
+      appBar: CustomAppbarName(title: "Vehicle Details", showBackButton: true),
       body: Padding(
         padding: const EdgeInsets.only(bottom: 24.0, left: 24.0, right: 24.0),
         child: Center(
@@ -32,6 +28,7 @@ class CurrentVehicle extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              const SizedBox(height: AppDimensions.sectionSpacing,),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -77,7 +74,7 @@ class CurrentVehicle extends StatelessWidget {
                             ),
                           ],
                         ),
-                        Gap(30),
+                        const SizedBox(height: AppDimensions.sectionSpacing + 10,),
                         Column(
                           children: [
                             Row(
@@ -189,6 +186,7 @@ class CurrentVehicle extends StatelessWidget {
                   ),
                 ],
               ),
+              Spacer(),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -203,6 +201,7 @@ class CurrentVehicle extends StatelessWidget {
                   child: Text("Manage Vehicles"),
                 ),
               ),
+              const SizedBox(height: 16,)
             ],
           ),
         ),

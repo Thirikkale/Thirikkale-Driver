@@ -1,8 +1,7 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:thirikkale_driver/core/utils/app_styles.dart';
-import 'package:thirikkale_driver/widgets/common/custom_appbar.dart';
+import 'package:thirikkale_driver/widgets/common/custom_appbar_name.dart';
 
 class Documents extends StatefulWidget {
   const Documents({super.key});
@@ -15,17 +14,13 @@ class _DocumentsState extends State<Documents> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CustomAppBar(
-        centerWidget: Image.asset(
-          'assets/icons/thirikkale_driver_appbar_logo.png',
-          height: 50.0,
-        ),
-      ),
+      appBar: CustomAppbarName(title: "Documents", showBackButton: true),
       body: Container(
         padding: EdgeInsets.only(bottom: 24.0, left: 24.0, right: 24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            SizedBox(height: 24,),
             Text("Your documents", style: AppTextStyles.heading2),
             Gap(20),
             Container(

@@ -4,7 +4,7 @@ import 'package:thirikkale_driver/core/utils/app_styles.dart';
 import 'package:thirikkale_driver/features/wallet/payout_history.dart';
 import 'package:thirikkale_driver/features/wallet/payout_method.dart';
 import 'package:thirikkale_driver/features/wallet/transaction_summary.dart';
-import 'package:thirikkale_driver/widgets/common/custom_input_field_label.dart';
+import 'package:thirikkale_driver/widgets/common/custom_appbar_name.dart';
 
 class Wallet extends StatefulWidget {
   const Wallet({super.key});

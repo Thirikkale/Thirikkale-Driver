@@ -1,11 +1,11 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:thirikkale_driver/core/utils/app_dimensions.dart';
 import 'package:thirikkale_driver/core/utils/app_styles.dart';
 import 'package:thirikkale_driver/features/home/widgets/vehicle_info.dart';
 import 'package:thirikkale_driver/features/vehicle_details/add_new_vehicle.dart';
 import 'package:thirikkale_driver/features/vehicle_details/current_vehicle.dart';
-import 'package:thirikkale_driver/widgets/common/custom_appbar.dart';
+import 'package:thirikkale_driver/widgets/common/custom_appbar_name.dart';
 
 class ManageVehicles extends StatefulWidget {
   const ManageVehicles({super.key});
@@ -38,12 +38,7 @@ class _ManageVehiclesState extends State<ManageVehicles> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CustomAppBar(
-        centerWidget: Image.asset(
-          'assets/icons/thirikkale_driver_appbar_logo.png',
-          height: 50.0,
-        ),
-      ),
+      appBar: CustomAppbarName(title: "Manage Vehicles", showBackButton: true),
       body: Padding(
         padding: const EdgeInsets.only(left: 24.0, right: 24.0, bottom: 24.0),
         child: Column(
@@ -52,6 +47,7 @@ class _ManageVehiclesState extends State<ManageVehicles> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                SizedBox(height: AppDimensions.sectionSpacing,),
                 Text("Your vehicles", style: AppTextStyles.heading2),
                 Gap(15),
                 ...List.generate(vehicles.length, (index) {
@@ -105,6 +101,7 @@ class _ManageVehiclesState extends State<ManageVehicles> {
                 ),
               ],
             ),
+            const Spacer(),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -127,6 +124,7 @@ class _ManageVehiclesState extends State<ManageVehicles> {
                 child: Text("Select this vehicle"),
               ),
             ),
+            SizedBox(height: 16,)
           ],
         ),
       ),

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:thirikkale_driver/core/utils/app_dimensions.dart';
 import 'package:thirikkale_driver/core/utils/app_styles.dart';
+import 'package:thirikkale_driver/features/documents/documents.dart';
+import 'package:thirikkale_driver/features/vehicle_details/current_vehicle.dart';
+import 'package:thirikkale_driver/features/wallet/wallet.dart';
 
 class DriverSidebar extends StatelessWidget {
   const DriverSidebar({super.key});
