@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:thirikkale_driver/core/provider/auth_provider.dart';
 import 'package:thirikkale_driver/core/utils/app_dimensions.dart';
 import 'package:thirikkale_driver/core/utils/app_styles.dart';
+import 'package:thirikkale_driver/features/drivepass/screens/drive_pass_screen.dart';
 
 class DriverSidebar extends StatelessWidget {
   const DriverSidebar({super.key});
@@ -129,7 +130,10 @@ class DriverSidebar extends StatelessWidget {
                 _buildMenuItem(
                   icon: Icons.verified_sharp,
                   title: 'Drive Pass',
-                  onTap: () => Navigator.pop(context),
+                  onTap: () {
+                    print('Drive Pass menu item tapped!');
+                    _navigateToDrivePass(context);
+                  },
                 ),
                 _buildMenuItem(
                   icon: Icons.history,
@@ -232,6 +236,33 @@ class DriverSidebar extends StatelessWidget {
     Navigator.pop(context);
     // Navigate to trip history screen
     print('Navigate to Trip History');
+  }
+
+  void _navigateToDrivePass(BuildContext context) {
+    print('_navigateToDrivePass method called');
+    Navigator.pop(context);
+    print('Drawer closed');
+
+    // Add a small delay to ensure drawer is fully closed
+    Future.delayed(const Duration(milliseconds: 200), () {
+      print('About to navigate to DrivePassScreen');
+      try {
+        // Try named route first
+        Navigator.pushNamed(context, '/drive-pass');
+        print('Named route navigation successful');
+      } catch (e) {
+        print('Named route failed: $e, trying direct navigation');
+        try {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const DrivePassScreen()),
+          );
+          print('Direct navigation successful');
+        } catch (e2) {
+          print('Direct navigation also failed: $e2');
+        }
+      }
+    });
   }
 
   void _navigateToEarnings(BuildContext context) {
