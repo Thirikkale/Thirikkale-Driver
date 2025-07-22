@@ -70,7 +70,7 @@ class DriverSidebar extends StatelessWidget {
                                 Icon(Icons.star, color: AppColors.white),
                                 SizedBox(width: 2.5),
                                 Text(
-                                  '5.00',
+                                  authProvider.rating!.toString(),
                                   style: AppTextStyles.bodyLarge.copyWith(
                                     color: AppColors.white,
                                     fontWeight: FontWeight.w600,
