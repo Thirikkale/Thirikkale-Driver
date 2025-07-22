@@ -8,7 +8,7 @@ import 'package:thirikkale_driver/core/provider/driver_provider.dart';
 import 'package:thirikkale_driver/core/provider/location_provider.dart';
 import 'package:thirikkale_driver/core/utils/app_theme.dart';
 
-void main() async {    
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await EnvConfig.loadEnv();
   await Firebase.initializeApp();

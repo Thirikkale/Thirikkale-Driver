@@ -11,6 +11,8 @@ import 'package:thirikkale_driver/features/earnings/screens/earnings_overview_sc
 import 'package:thirikkale_driver/features/earnings/screens/earnings_history_screen.dart';
 import 'package:thirikkale_driver/features/earnings/screens/payout_settings_screen.dart';
 import 'package:thirikkale_driver/features/earnings/screens/earnings_analytics_screen.dart';
+import 'package:thirikkale_driver/features/earnings/screens/trips_screen.dart';
+import 'package:thirikkale_driver/features/earnings/screens/bonuses_screen.dart';
 
 class AppRoutes {
   static const String initial = '/';
@@ -26,6 +28,8 @@ class AppRoutes {
   static const String earningsHistory = '/earnings-history';
   static const String payoutSettings = '/payout-settings';
   static const String earningsAnalytics = '/earnings-analytics';
+  static const String trips = '/trips';
+  static const String bonuses = '/bonuses';
 
   static Map<String, WidgetBuilder> getRoutes() {
     return {
@@ -42,6 +46,8 @@ class AppRoutes {
       earningsHistory: (context) => const EarningsHistoryScreen(),
       payoutSettings: (context) => const PayoutSettingsScreen(),
       earningsAnalytics: (context) => const EarningsAnalyticsScreen(),
+      trips: (context) => const TripsScreen(),
+      bonuses: (context) => const BonusesScreen(),
     };
   }
 }

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:thirikkale_driver/core/utils/app_styles.dart';
+import 'package:thirikkale_driver/widgets/common/custom_appbar_name.dart';
 import 'package:thirikkale_driver/core/utils/app_dimensions.dart';
+import 'package:thirikkale_driver/features/earnings/widgets/earnings_navigation_panel.dart';
 
 class EarningsHistoryScreen extends StatefulWidget {
   const EarningsHistoryScreen({super.key});
@@ -22,25 +24,8 @@ class _EarningsHistoryScreenState extends State<EarningsHistoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.surfaceLight,
-      appBar: AppBar(
-        backgroundColor: AppColors.white,
-        elevation: 0,
-        leading: IconButton(
-          onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
-        ),
-        title: Text(
-          'Earnings History',
-          style: AppTextStyles.heading3.copyWith(color: AppColors.textPrimary),
-        ),
-        actions: [
-          IconButton(
-            onPressed: _showFilterOptions,
-            icon: const Icon(Icons.filter_list, color: AppColors.textPrimary),
-          ),
-        ],
-      ),
+      backgroundColor: AppColors.lightGrey,
+      appBar: _buildAppBar(),
       body: Column(
         children: [
           _buildFilterChips(),
@@ -48,6 +33,18 @@ class _EarningsHistoryScreenState extends State<EarningsHistoryScreen> {
           Expanded(child: _buildHistoryList()),
         ],
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => EarningsNavigationPanel.show(context),
+        backgroundColor: AppColors.primaryBlue,
+        child: const Icon(Icons.menu, color: AppColors.white),
+      ),
+    );
+  }
+
+  PreferredSizeWidget _buildAppBar() {
+    return const CustomAppbarName(
+      title: 'Earnings History',
+      showBackButton: true,
     );
   }
 
@@ -55,36 +52,47 @@ class _EarningsHistoryScreenState extends State<EarningsHistoryScreen> {
     return Container(
       color: AppColors.white,
       padding: const EdgeInsets.all(AppDimensions.pageHorizontalPadding),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children:
-              _filters.map((filter) {
-                final isSelected = filter == _selectedFilter;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: FilterChip(
-                    label: Text(filter),
-                    selected: isSelected,
-                    onSelected: (selected) {
-                      setState(() => _selectedFilter = filter);
-                    },
-                    backgroundColor: AppColors.lightGrey,
-                    selectedColor: AppColors.primaryBlue,
-                    labelStyle: AppTextStyles.bodyMedium.copyWith(
-                      color:
-                          isSelected
-                              ? AppColors.white
-                              : AppColors.textSecondary,
-                      fontWeight:
-                          isSelected ? FontWeight.w600 : FontWeight.w500,
-                    ),
-                    checkmarkColor: AppColors.white,
-                    side: BorderSide.none,
-                  ),
-                );
-              }).toList(),
-        ),
+      child: Row(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children:
+                    _filters.map((filter) {
+                      final isSelected = filter == _selectedFilter;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: FilterChip(
+                          label: Text(filter),
+                          selected: isSelected,
+                          onSelected: (selected) {
+                            setState(() => _selectedFilter = filter);
+                          },
+                          backgroundColor: AppColors.lightGrey,
+                          selectedColor: AppColors.primaryBlue,
+                          labelStyle: AppTextStyles.bodyMedium.copyWith(
+                            color:
+                                isSelected
+                                    ? AppColors.white
+                                    : AppColors.textSecondary,
+                            fontWeight:
+                                isSelected ? FontWeight.w600 : FontWeight.w500,
+                          ),
+                          checkmarkColor: AppColors.white,
+                          side: BorderSide.none,
+                        ),
+                      );
+                    }).toList(),
+              ),
+            ),
+          ),
+          IconButton(
+            onPressed: _showFilterOptions,
+            icon: const Icon(Icons.filter_list),
+            color: AppColors.primaryBlue,
+          ),
+        ],
       ),
     );
   }
