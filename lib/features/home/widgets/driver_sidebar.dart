@@ -77,7 +77,9 @@ class DriverSidebar extends StatelessWidget {
                                 Icon(Icons.star, color: AppColors.white),
                                 SizedBox(width: 2.5),
                                 Text(
-                                  authProvider.rating != null ? authProvider.rating.toString() : '0.00',
+                                  authProvider.rating != null
+                                      ? authProvider.rating.toString()
+                                      : '0.00',
                                   style: AppTextStyles.bodyLarge.copyWith(
                                     color: AppColors.white,
                                     fontWeight: FontWeight.w600,
@@ -186,7 +188,7 @@ class DriverSidebar extends StatelessWidget {
                 ),
                 _buildMenuItem(
                   icon: Icons.logout,
-                  title: 'Logout',
+                  title: 'Sign Out',
                   onTap: () => _showLogoutDialog(context),
                   textColor: AppColors.error,
                 ),
@@ -244,12 +246,17 @@ class DriverSidebar extends StatelessWidget {
     Navigator.pop(context); // Close drawer first
     Navigator.of(context).push(
       PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => const TripHistoryScreen(),
+        pageBuilder:
+            (context, animation, secondaryAnimation) =>
+                const TripHistoryScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           const begin = Offset(1.0, 0.0);
           const end = Offset.zero;
           const curve = Curves.easeInOut;
-          var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+          var tween = Tween(
+            begin: begin,
+            end: end,
+          ).chain(CurveTween(curve: curve));
           var offsetAnimation = animation.drive(tween);
           return SlideTransition(position: offsetAnimation, child: child);
         },
@@ -295,6 +302,7 @@ class DriverSidebar extends StatelessWidget {
       }
     });
   }
+
   void _navigateToWallet(BuildContext context) {
     Navigator.pop(context);
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => Wallet()));
@@ -304,7 +312,9 @@ class DriverSidebar extends StatelessWidget {
 
   void _navigateToVehicleDetails(BuildContext context) {
     Navigator.pop(context);
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => CurrentVehicle()));
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => CurrentVehicle()));
     // Navigate to vehicle details screen
     print('Navigate to Vehicle Details');
   }
@@ -321,7 +331,6 @@ class DriverSidebar extends StatelessWidget {
     // Navigate to ratings screen
     Navigator.pushNamed(context, AppRoutes.reviews);
   }
-   
 
   void _navigateToSupport(BuildContext context) {
     Navigator.pop(context);
@@ -359,25 +368,41 @@ class DriverSidebar extends StatelessWidget {
   }
 
   void _showLogoutDialog(BuildContext context) {
-    Navigator.pop(context);
     showDialog(
       context: context,
       builder:
           (context) => AlertDialog(
-            title: const Text('Logout'),
-            content: const Text('Are you sure you want to logout?'),
+            title: const Text('Sign Out'),
+            content: const Text('Are you sure you want to sign out?'),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(context),
+                onPressed: () => Navigator.pop(context), // Close dialog
                 child: const Text('Cancel'),
               ),
               TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  // Perform logout
-                  print('Logout');
+                onPressed: () async {
+                  Navigator.pop(context); // Close the dialog first
+                  if (!context.mounted) return;
+
+                  final authProvider = Provider.of<AuthProvider>(
+                    context,
+                    listen: false,
+                  );
+
+                  await authProvider.logout();
+
+                  if (!context.mounted) return;
+
+                  Navigator.pushNamedAndRemoveUntil(
+                    context,
+                    AppRoutes.initial,
+                    (route) => false,
+                  );
                 },
-                child: Text('Logout', style: TextStyle(color: AppColors.error)),
+                child: Text(
+                  'Sign Out',
+                  style: TextStyle(color: AppColors.error),
+                ),
               ),
             ],
           ),
