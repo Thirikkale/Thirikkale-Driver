@@ -4,6 +4,7 @@ import 'package:thirikkale_driver/core/provider/auth_provider.dart';
 import 'package:thirikkale_driver/core/utils/app_dimensions.dart';
 import 'package:thirikkale_driver/core/utils/app_styles.dart';
 import 'package:thirikkale_driver/features/drivepass/screens/drive_pass_screen.dart';
+import 'package:thirikkale_driver/features/support/screens/support_screen.dart';
 
 class DriverSidebar extends StatelessWidget {
   const DriverSidebar({super.key});
@@ -71,7 +72,7 @@ class DriverSidebar extends StatelessWidget {
                                 Icon(Icons.star, color: AppColors.white),
                                 SizedBox(width: 2.5),
                                 Text(
-                                  authProvider.rating!.toString(),
+                                  authProvider.rating != null ? authProvider.rating.toString() : '0.00',
                                   style: AppTextStyles.bodyLarge.copyWith(
                                     color: AppColors.white,
                                     fontWeight: FontWeight.w600,
@@ -286,7 +287,10 @@ class DriverSidebar extends StatelessWidget {
   void _navigateToSupport(BuildContext context) {
     Navigator.pop(context);
     // Navigate to support screen
-    print('Navigate to Support');
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const SupportScreen()),
+    );
   }
 
   void _navigateToSettings(BuildContext context) {
