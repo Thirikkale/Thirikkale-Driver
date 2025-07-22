@@ -10,7 +10,6 @@ import 'package:thirikkale_driver/features/reviewrate/screens/reviews_screen.dar
 import 'package:thirikkale_driver/features/earnings/screens/earnings_overview_screen.dart';
 import 'package:thirikkale_driver/features/earnings/screens/earnings_history_screen.dart';
 import 'package:thirikkale_driver/features/earnings/screens/payout_settings_screen.dart';
-import 'package:thirikkale_driver/features/earnings/screens/earnings_analytics_screen.dart';
 import 'package:thirikkale_driver/features/earnings/screens/trips_payment_screen.dart';
 
 class AppRoutes {
@@ -44,7 +43,6 @@ class AppRoutes {
       earningsOverview: (context) => const EarningsOverviewScreen(),
       earningsHistory: (context) => const EarningsHistoryScreen(),
       payoutSettings: (context) => const PayoutSettingsScreen(),
-      earningsAnalytics: (context) => const EarningsAnalyticsScreen(),
       trips: (context) => const TripsPaymentScreen(),
       tripPayment: (context) => const TripsPaymentScreen(),
     };
