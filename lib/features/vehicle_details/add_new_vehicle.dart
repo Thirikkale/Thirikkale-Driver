@@ -33,6 +33,7 @@ class _DocumentUploadScreenState extends State<AddNewVehicle> {
 
   late final List<VehicleType> _vehicleTypes;
   late VehicleType _selectedVehicle;
+  // ignore: unused_field, prefer_final_fields
   bool _isDriverRegistered = false;
 
   @override
@@ -147,6 +148,7 @@ class _DocumentUploadScreenState extends State<AddNewVehicle> {
     });
   }
 
+  // ignore: unused_element
   void _handleContinue() {
     if (!_allStepsCompleted) return;
 

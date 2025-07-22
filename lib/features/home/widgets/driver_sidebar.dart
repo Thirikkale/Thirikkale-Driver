@@ -9,6 +9,7 @@ import 'package:thirikkale_driver/features/documents/documents.dart';
 import 'package:thirikkale_driver/features/vehicle_details/current_vehicle.dart';
 import 'package:thirikkale_driver/features/wallet/wallet.dart';
 import 'package:thirikkale_driver/features/trip_history/screens/trip_history_screen.dart';
+import 'package:thirikkale_driver/config/routes.dart';
 
 class DriverSidebar extends StatelessWidget {
   const DriverSidebar({super.key});
@@ -135,10 +136,7 @@ class DriverSidebar extends StatelessWidget {
                 _buildMenuItem(
                   icon: Icons.verified_sharp,
                   title: 'Drive Pass',
-                  onTap: () {
-                    print('Drive Pass menu item tapped!');
-                    _navigateToDrivePass(context);
-                  },
+                  onTap: () => _navigateToDrivePass(context),
                 ),
                 _buildMenuItem(
                   icon: Icons.history,
@@ -289,7 +287,13 @@ class DriverSidebar extends StatelessWidget {
   void _navigateToEarnings(BuildContext context) {
     Navigator.pop(context);
     // Navigate to earnings screen
-    print('Navigate to Earnings');
+    Future.delayed(const Duration(milliseconds: 200), () {
+      try {
+        Navigator.pushNamed(context, AppRoutes.earningsOverview);
+      } catch (e) {
+        print('Navigation to earnings failed: $e');
+      }
+    });
   }
   void _navigateToWallet(BuildContext context) {
     Navigator.pop(context);
@@ -313,9 +317,9 @@ class DriverSidebar extends StatelessWidget {
   }
 
   void _navigateToRatings(BuildContext context) {
-     Navigator.pop(context);
-    // Navigate to Ratings and Reviews screen
-    print('Navigate to Ratings & Reviews');
+    Navigator.pop(context);
+    // Navigate to ratings screen
+    Navigator.pushNamed(context, AppRoutes.reviews);
   }
    
 
