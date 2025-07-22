@@ -5,6 +5,9 @@ import 'package:thirikkale_driver/core/utils/app_dimensions.dart';
 import 'package:thirikkale_driver/core/utils/app_styles.dart';
 import 'package:thirikkale_driver/features/drivepass/screens/drive_pass_screen.dart';
 import 'package:thirikkale_driver/features/support/screens/support_screen.dart';
+import 'package:thirikkale_driver/features/documents/documents.dart';
+import 'package:thirikkale_driver/features/vehicle_details/current_vehicle.dart';
+import 'package:thirikkale_driver/features/wallet/wallet.dart';
 
 class DriverSidebar extends StatelessWidget {
   const DriverSidebar({super.key});
@@ -147,6 +150,11 @@ class DriverSidebar extends StatelessWidget {
                   onTap: () => _navigateToEarnings(context),
                 ),
                 _buildMenuItem(
+                  icon: Icons.account_balance_wallet,
+                  title: 'Wallet',
+                  onTap: () => _navigateToWallet(context),
+                ),
+                _buildMenuItem(
                   icon: Icons.directions_car,
                   title: 'Vehicle Details',
                   onTap: () => _navigateToVehicleDetails(context),
@@ -154,7 +162,7 @@ class DriverSidebar extends StatelessWidget {
                 _buildMenuItem(
                   icon: Icons.list_alt_outlined,
                   title: 'Documents',
-                  onTap: () => _navigateToVehicleDetails(context),
+                  onTap: () => _navigateToDocumentDetails(context),
                 ),
                 _buildMenuItem(
                   icon: Icons.star,
@@ -271,9 +279,23 @@ class DriverSidebar extends StatelessWidget {
     // Navigate to earnings screen
     print('Navigate to Earnings');
   }
+  void _navigateToWallet(BuildContext context) {
+    Navigator.pop(context);
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => Wallet()));
+    // Navigate to earnings screen
+    print('Navigate to Earnings');
+  }
 
   void _navigateToVehicleDetails(BuildContext context) {
     Navigator.pop(context);
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => CurrentVehicle()));
+    // Navigate to vehicle details screen
+    print('Navigate to Vehicle Details');
+  }
+
+  void _navigateToDocumentDetails(BuildContext context) {
+    Navigator.pop(context);
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => Documents()));
     // Navigate to vehicle details screen
     print('Navigate to Vehicle Details');
   }

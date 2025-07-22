@@ -1,3 +1,4 @@
+import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/material.dart';
 
 class AppColors {
@@ -126,4 +127,33 @@ class AppButtonStyles {
     ),
     elevation: 0, // Flat design without shadow
   );
+
+    static final ButtonStyle greyButton = ElevatedButton.styleFrom(
+    backgroundColor: AppColors.lightGrey,
+    foregroundColor: AppColors.black,
+    textStyle: AppTextStyles.button,
+    padding: const EdgeInsets.symmetric(horizontal: 30.0, vertical: 16.0),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(8.0),
+      side: const BorderSide(color: AppColors.grey, width: 1.5),
+    ),
+  );
+
+  static Widget dottedButton(Widget child) {
+    return DottedBorder(
+      color: AppColors.grey,
+      strokeWidth: 2.5,
+      dashPattern: [10, 3],
+      borderType: BorderType.RRect,
+      radius: const Radius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 30.0, vertical: 16.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            child
+          ]),
+      ),
+    );
+  }
 }
