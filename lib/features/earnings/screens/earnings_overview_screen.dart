@@ -57,7 +57,7 @@ class _EarningsOverviewScreenState extends State<EarningsOverviewScreen> {
       floatingActionButton: FloatingActionButton(
         onPressed: () => EarningsNavigationPanel.show(context),
         backgroundColor: AppColors.primaryBlue,
-        child: const Icon(Icons.dashboard, color: AppColors.white),
+        child: const Icon(Icons.menu, color: AppColors.white),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );

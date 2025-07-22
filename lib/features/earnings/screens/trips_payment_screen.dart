@@ -139,7 +139,7 @@ class _TripsPaymentScreenState extends State<TripsPaymentScreen> {
       floatingActionButton: FloatingActionButton(
         onPressed: () => EarningsNavigationPanel.show(context),
         backgroundColor: AppColors.primaryBlue,
-        child: const Icon(Icons.payment, color: AppColors.white),
+        child: const Icon(Icons.menu, color: AppColors.white),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );

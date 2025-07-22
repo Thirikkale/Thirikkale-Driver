@@ -14,6 +14,7 @@ class EarningsHistoryScreen extends StatefulWidget {
 class _EarningsHistoryScreenState extends State<EarningsHistoryScreen> {
   String _selectedPeriod = 'All';
   final List<String> _periods = ['Today', 'This Week', 'This Month', 'All'];
+  String _selectedFilter = 'All Transactions';
 
   @override
   Widget build(BuildContext context) {
@@ -26,6 +27,8 @@ class _EarningsHistoryScreenState extends State<EarningsHistoryScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildPeriodSelector(),
+            const SizedBox(height: 20),
+            _buildSummaryCard(),
             const SizedBox(height: 24),
             _buildHistoryList(),
           ],
@@ -34,7 +37,7 @@ class _EarningsHistoryScreenState extends State<EarningsHistoryScreen> {
       floatingActionButton: FloatingActionButton(
         onPressed: () => EarningsNavigationPanel.show(context),
         backgroundColor: AppColors.primaryBlue,
-        child: const Icon(Icons.history, color: AppColors.white),
+        child: const Icon(Icons.menu, color: AppColors.white),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
@@ -90,10 +93,313 @@ class _EarningsHistoryScreenState extends State<EarningsHistoryScreen> {
     );
   }
 
+  Widget _buildSummaryCard() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.primaryBlue.withOpacity(0.1), AppColors.white],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.primaryBlue.withOpacity(0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.primaryBlue,
+                      AppColors.primaryBlue.withOpacity(0.8),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.account_balance_wallet,
+                  color: AppColors.white,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Transaction Summary',
+                      style: AppTextStyles.heading3.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    Text(
+                      'Financial overview for $_selectedPeriod',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: _buildSummaryItem(
+                  'Total Credits',
+                  'LKR 12,480',
+                  '+15.2%',
+                  AppColors.success,
+                  Icons.trending_up,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildSummaryItem(
+                  'Total Debits',
+                  'LKR 2,060',
+                  '-8.3%',
+                  AppColors.error,
+                  Icons.trending_down,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.success.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.success.withOpacity(0.3)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.account_balance, color: AppColors.success, size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Net Balance',
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: AppColors.success,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        'Your current earnings balance',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.textSecondary,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  'LKR 10,420',
+                  style: AppTextStyles.bodyLarge.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.success,
+                    fontSize: 18,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryItem(
+    String title,
+    String amount,
+    String change,
+    Color color,
+    IconData icon,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Icon(icon, color: color, size: 16),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  change,
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 9,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            amount,
+            style: AppTextStyles.bodyLarge.copyWith(
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+              fontSize: 16,
+            ),
+          ),
+          Text(
+            title,
+            style: AppTextStyles.bodySmall.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildHistoryList() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Filter and Sort Row
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Transaction History',
+              style: AppTextStyles.heading3.copyWith(
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            Row(
+              children: [
+                GestureDetector(
+                  onTap: _showFilterOptions,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryBlue.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AppColors.primaryBlue.withOpacity(0.3),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.filter_list,
+                          color: AppColors.primaryBlue,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          _selectedFilter == 'All Transactions'
+                              ? 'Filter'
+                              : _selectedFilter,
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.primaryBlue,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: () {
+                    // Export functionality
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Row(
+                          children: [
+                            Icon(
+                              Icons.download,
+                              color: AppColors.white,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 8),
+                            const Text('Export feature coming soon!'),
+                          ],
+                        ),
+                        backgroundColor: AppColors.success,
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.success.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AppColors.success.withOpacity(0.3),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.download,
+                          color: AppColors.success,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Export',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.success,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
         const SizedBox(height: 16),
         _buildDateSection('Today', [
           _buildTransactionItem(
@@ -374,36 +680,67 @@ class _EarningsHistoryScreenState extends State<EarningsHistoryScreen> {
   }
 
   Widget _buildFilterOption(String title, IconData icon) {
+    final bool isSelected = _selectedFilter == title;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: AppColors.lightGrey.withOpacity(0.3),
+        color:
+            isSelected
+                ? AppColors.primaryBlue.withOpacity(0.1)
+                : AppColors.lightGrey.withOpacity(0.3),
         borderRadius: BorderRadius.circular(12),
+        border:
+            isSelected
+                ? Border.all(color: AppColors.primaryBlue.withOpacity(0.5))
+                : null,
       ),
       child: ListTile(
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: AppColors.primaryBlue.withOpacity(0.1),
+            color:
+                isSelected
+                    ? AppColors.primaryBlue.withOpacity(0.2)
+                    : AppColors.primaryBlue.withOpacity(0.1),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(icon, color: AppColors.primaryBlue, size: 20),
+          child: Icon(
+            icon,
+            color: isSelected ? AppColors.primaryBlue : AppColors.primaryBlue,
+            size: 20,
+          ),
         ),
         title: Text(
           title,
           style: AppTextStyles.bodyMedium.copyWith(
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.w500,
+            color: isSelected ? AppColors.primaryBlue : AppColors.textPrimary,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
           ),
         ),
-        trailing: Icon(
-          Icons.arrow_forward_ios,
-          size: 16,
-          color: AppColors.textSecondary,
-        ),
+        trailing:
+            isSelected
+                ? Icon(
+                  Icons.check_circle,
+                  size: 20,
+                  color: AppColors.primaryBlue,
+                )
+                : Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: AppColors.textSecondary,
+                ),
         onTap: () {
           Navigator.pop(context);
-          setState(() => _selectedPeriod = title);
+          setState(() => _selectedFilter = title);
+          // Show feedback
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Filter applied: $title'),
+              duration: const Duration(seconds: 2),
+              backgroundColor: AppColors.primaryBlue,
+            ),
+          );
         },
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

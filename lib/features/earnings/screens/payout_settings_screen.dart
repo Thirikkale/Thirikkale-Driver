@@ -33,7 +33,7 @@ class _PayoutSettingsScreenState extends State<PayoutSettingsScreen> {
       floatingActionButton: FloatingActionButton(
         onPressed: () => EarningsNavigationPanel.show(context),
         backgroundColor: AppColors.primaryBlue,
-        child: const Icon(Icons.account_balance_wallet, color: AppColors.white),
+        child: const Icon(Icons.menu, color: AppColors.white),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
