@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:thirikkale_driver/core/utils/app_dimensions.dart';
 import 'package:thirikkale_driver/core/utils/app_styles.dart';
-import 'package:thirikkale_driver/core/utils/navigation_utils.dart';
 import 'package:thirikkale_driver/features/trip_history/screens/trip_history_screen.dart';
+import 'package:thirikkale_driver/features/ratings_reviews/screens/ratings_screen.dart';
 
 class DriverSidebar extends StatelessWidget {
   const DriverSidebar({super.key});
@@ -179,14 +179,20 @@ class DriverSidebar extends StatelessWidget {
   }
 
   void _navigateToTripHistory(BuildContext context) {
+    Navigator.pop(context); // Close drawer first
     Navigator.of(context).push(
-      NoAnimationPageRoute(
-        builder: (context) => const TripHistoryScreen(),
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => const TripHistoryScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          const begin = Offset(1.0, 0.0);
+          const end = Offset.zero;
+          const curve = Curves.easeInOut;
+          var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+          var offsetAnimation = animation.drive(tween);
+          return SlideTransition(position: offsetAnimation, child: child);
+        },
       ),
     );
-    // Navigate to trip history screen
-    print('Navigate to Trip History');
-    
   }
 
   void _navigateToEarnings(BuildContext context) {
@@ -202,10 +208,11 @@ class DriverSidebar extends StatelessWidget {
   }
 
   void _navigateToRatings(BuildContext context) {
-    Navigator.pop(context);
-    // Navigate to ratings screen
-    print('Navigate to Ratings');
+     Navigator.pop(context);
+    // Navigate to Ratings and Reviews screen
+    print('Navigate to Ratings & Reviews');
   }
+   
 
   void _navigateToSupport(BuildContext context) {
     Navigator.pop(context);
