@@ -1,3 +1,4 @@
+import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/material.dart';
 
 class AppColors {
@@ -6,6 +7,7 @@ class AppColors {
   static const Color white = Color(0xFFFFFFFF);
   static const Color primaryBlue = Color(0xFF0EA5E9);
   static const Color secondaryBlue = Color(0xFF3B82F6);
+  static const Color primaryGreen = Color(0xFF22C55E); // Added for pickup marker
 
   // Background colors
   static const Color background = Color(0xFFFFFFFF); // Pure white background
@@ -18,6 +20,7 @@ class AppColors {
   // Other colors
   static const Color grey = Color(0xFF6C757D);
   static const Color lightGrey = Color(0xFFDEE2E6);
+  static const Color subtleGrey = Color(0xFFE9ECEF);
   static const Color error = Color(0xFFDC3545);
   static const Color success = Color(0xFF198754);
   static const Color warning = Color(0xFFFFC107);
@@ -43,6 +46,12 @@ class AppTextStyles {
     color: AppColors.black,
   );
 
+  static const TextStyle bodyXLarge = TextStyle(
+    fontSize: 18.0,
+    fontWeight: FontWeight.normal,
+    color: AppColors.black,
+  );
+
   static const TextStyle bodyLarge = TextStyle(
     fontSize: 16.0,
     fontWeight: FontWeight.normal,
@@ -50,7 +59,7 @@ class AppTextStyles {
   );
 
   static const TextStyle bodyMedium = TextStyle(
-    fontSize: 14.0,
+    fontSize: 14.5,
     fontWeight: FontWeight.normal,
     color: AppColors.black,
   );
@@ -118,4 +127,33 @@ class AppButtonStyles {
     ),
     elevation: 0, // Flat design without shadow
   );
+
+    static final ButtonStyle greyButton = ElevatedButton.styleFrom(
+    backgroundColor: AppColors.lightGrey,
+    foregroundColor: AppColors.black,
+    textStyle: AppTextStyles.button,
+    padding: const EdgeInsets.symmetric(horizontal: 30.0, vertical: 16.0),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(8.0),
+      side: const BorderSide(color: AppColors.grey, width: 1.5),
+    ),
+  );
+
+  static Widget dottedButton(Widget child) {
+    return DottedBorder(
+      color: AppColors.grey,
+      strokeWidth: 2.5,
+      dashPattern: [10, 3],
+      borderType: BorderType.RRect,
+      radius: const Radius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 30.0, vertical: 16.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            child
+          ]),
+      ),
+    );
+  }
 }

@@ -13,4 +13,5 @@ key.properties
 **/*.keystore
 **/*.jks
 
+# API KEYS
 secrets.properties
