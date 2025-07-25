@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:thirikkale_driver/core/utils/app_styles.dart';
-import 'package:thirikkale_driver/widgets/common/custom_input_field_label.dart';
+import 'package:thirikkale_driver/widgets/common/custom_appbar_name.dart';
 
 class PayoutMethod extends StatefulWidget {
   const PayoutMethod({super.key});

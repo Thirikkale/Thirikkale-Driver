@@ -10,6 +10,8 @@ class AppDimensions {
   static const double sectionSpacing = 24.0;
   static const double subSectionSpacing = 16.0;
   static const double subSectionSpacingDown = 4.0;
+   static const double spacingSmall = 8.0;
+  static const double spacingMedium = 16.0;
 
   // Specific list padding
   static const EdgeInsets horizontalListViewPadding = EdgeInsets.symmetric(horizontal: pageHorizontalPadding);

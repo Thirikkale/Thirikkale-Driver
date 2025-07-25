@@ -7,8 +7,29 @@ import 'package:thirikkale_driver/features/authentication/widgets/upload_screen_
 import 'package:thirikkale_driver/features/authentication/widgets/upload_screen_widgets/guidelines_widget.dart';
 import 'package:thirikkale_driver/widgets/common/custom_appbar.dart';
 
-class VehicleInsuranceScreen extends StatelessWidget {
+class VehicleInsuranceScreen extends StatefulWidget {
   const VehicleInsuranceScreen({super.key});
+
+  @override
+  State<VehicleInsuranceScreen> createState() => _VehicleInsuranceScreenState();
+}
+
+class _VehicleInsuranceScreenState extends State<VehicleInsuranceScreen> {
+  Future<void> _handleTakePhoto() async {
+    final result = await Navigator.of(context).push<bool>(
+      NoAnimationPageRoute(
+        builder:
+            (context) => const CameraScreen(documentType: 'vehicle_insurance'),
+      ),
+    );
+
+    if (!mounted) return;
+
+    // If photo was successfully uploaded, return true to mark as completed
+    if (result == true) {
+      Navigator.of(context).pop(true);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -74,16 +95,7 @@ class VehicleInsuranceScreen extends StatelessWidget {
                 width: double.infinity,
                 child: ElevatedButton(
                   style: AppButtonStyles.primaryButton,
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      NoAnimationPageRoute(
-                        builder:
-                            (context) => const CameraScreen(
-                              documentType: 'vehicle_insurance',
-                            ),
-                      ),
-                    );
-                  },
+                  onPressed: _handleTakePhoto,
                   child: const Text('Take Photo'),
                 ),
               ),

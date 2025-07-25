@@ -6,9 +6,10 @@ import 'package:thirikkale_driver/config/routes.dart';
 import 'package:thirikkale_driver/core/provider/auth_provider.dart';
 import 'package:thirikkale_driver/core/provider/driver_provider.dart';
 import 'package:thirikkale_driver/core/provider/location_provider.dart';
+import 'package:thirikkale_driver/core/provider/ride_provider.dart';
 import 'package:thirikkale_driver/core/utils/app_theme.dart';
 
-void main() async {    
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await EnvConfig.loadEnv();
   await Firebase.initializeApp();
@@ -24,6 +25,7 @@ class ThirikkaleDriverApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => LocationProvider()),
         ChangeNotifierProvider(create: (_) => DriverProvider()),
+        ChangeNotifierProvider(create: (_) => RideProvider()),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
@@ -31,7 +33,7 @@ class ThirikkaleDriverApp extends StatelessWidget {
         theme: AppTheme.lightTheme,
         // darkTheme: AppTheme.darkTheme,
         // themeMode: ThemeMode.system,
-        initialRoute: AppRoutes.driverHome,
+        initialRoute: AppRoutes.initial,
         routes: AppRoutes.getRoutes(),
       ),
     );
