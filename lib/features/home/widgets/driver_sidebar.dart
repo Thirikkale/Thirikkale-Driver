@@ -3,6 +3,7 @@ import 'package:thirikkale_driver/core/utils/app_dimensions.dart';
 import 'package:thirikkale_driver/core/utils/app_styles.dart';
 import 'package:thirikkale_driver/features/trip_history/screens/trip_history_screen.dart';
 import 'package:thirikkale_driver/features/ratings_reviews/screens/ratings_screen.dart';
+import 'package:thirikkale_driver/features/settings/screens/settings_screen.dart';
 
 class DriverSidebar extends StatelessWidget {
   const DriverSidebar({super.key});
@@ -221,9 +222,20 @@ class DriverSidebar extends StatelessWidget {
   }
 
   void _navigateToSettings(BuildContext context) {
-    Navigator.pop(context);
-    // Navigate to settings screen
-    print('Navigate to Settings');
+    Navigator.pop(context); // Close drawer first
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => const SettingsScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          const begin = Offset(1.0, 0.0);
+          const end = Offset.zero;
+          const curve = Curves.easeInOut;
+          var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+          var offsetAnimation = animation.drive(tween);
+          return SlideTransition(position: offsetAnimation, child: child);
+        },
+      ),
+    );
   }
 
   void _showAboutDialog(BuildContext context) {
