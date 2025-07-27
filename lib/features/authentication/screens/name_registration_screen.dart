@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:thirikkale_driver/core/provider/auth_provider.dart';
 import 'package:thirikkale_driver/core/utils/navigation_utils.dart';
+import 'package:thirikkale_driver/core/utils/snackbar_helper.dart';
 import 'package:thirikkale_driver/features/authentication/screens/document_upload_screen.dart';
 import 'package:thirikkale_driver/features/authentication/widgets/sign_navigation_button_row.dart';
 import 'package:thirikkale_driver/widgets/common/custom_appbar.dart';
@@ -22,6 +25,16 @@ class _NameRegistrationScreenState extends State<NameRegistrationScreen> {
     super.initState();
     _firstNameController.addListener(_validateForm);
     _lastNameController.addListener(_validateForm);
+
+    // Pre-populate fields if names already exist in provider
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    if (authProvider.firstName != null && authProvider.firstName != 'Driver') {
+      _firstNameController.text = authProvider.firstName!;
+    }
+    if (authProvider.lastName != null && authProvider.lastName != 'User') {
+      _lastNameController.text = authProvider.lastName!;
+    }
+    _validateForm();
   }
 
   @override
@@ -39,64 +52,90 @@ class _NameRegistrationScreenState extends State<NameRegistrationScreen> {
     });
   }
 
-  void _navigateToDocumentUpload() {
-    // Send details to backend also store the name in your AuthProvider here
-    // final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    // authProvider.setUserName(_firstNameController.text, _lastNameController.text);
+  void _completeProfile() async {
+    if (!_isFormValid) return;
 
-    Navigator.of(context).push(
-      NoAnimationPageRoute(
-        builder:
-            (context) => DocumentUploadScreen(
-              firstName: _firstNameController.text.trim(),
-            ),
-      ),
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+    final firstName = _firstNameController.text.trim();
+    final lastName = _lastNameController.text.trim();
+
+    // Store name in provider first
+    authProvider.setUserName(firstName, lastName);
+
+    if (!mounted) return;
+
+    // Complete the profile with names using the new API endpoint
+    final success = await authProvider.completeDriverProfile(
+      firstName: firstName,
+      lastName: lastName,
     );
+
+    if (!mounted) return;
+
+    if (success) {
+      // Navigate to document upload screen
+      Navigator.of(context).pushAndRemoveUntil(
+        NoAnimationPageRoute(
+          builder: (context) => DocumentUploadScreen(firstName: firstName),
+        ),
+        (route) => false,
+      );
+    } else {
+      SnackbarHelper.showErrorSnackBar(
+        context,
+        'Profile completion failed. Please try again.',
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: CustomAppBar(
-        centerWidget: Image.asset(
-          'assets/icons/thirikkale_driver_appbar_logo.png',
-          height: 50.0,
-        ),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'What is your name?',
-              style: Theme.of(context).textTheme.headlineLarge,
+    return Consumer<AuthProvider>(
+      builder: (context, authProvider, child) {
+        return Scaffold(
+          appBar: CustomAppBar(
+            centerWidget: Image.asset(
+              'assets/icons/thirikkale_driver_appbar_logo.png',
+              height: 50.0,
             ),
-            const SizedBox(height: 16),
-            Text(
-              'Let us know how to properly address you.',
-              style: Theme.of(context).textTheme.bodyLarge,
+          ),
+          body: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'What is your name?',
+                  style: Theme.of(context).textTheme.headlineLarge,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Let us know how to properly address you.',
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+                const SizedBox(height: 14),
+                CustomInputFieldLabel(
+                  label: "First Name",
+                  controller: _firstNameController,
+                ),
+                const SizedBox(height: 16),
+                CustomInputFieldLabel(
+                  label: "Last Name",
+                  controller: _lastNameController,
+                ),
+                const Spacer(),
+                SignNavigationButtonRow(
+                  onBack: () => Navigator.pop(context),
+                  onNext: _isFormValid ? _completeProfile : null,
+                  nextEnabled: _isFormValid && !authProvider.isLoading,
+                ),
+                const SizedBox(height: 32),
+              ],
             ),
-            const SizedBox(height: 14),
-            CustomInputFieldLabel(
-              label: "First Name",
-              controller: _firstNameController,
-            ),
-            const SizedBox(height: 16),
-            CustomInputFieldLabel(
-              label: "Last Name",
-              controller: _lastNameController,
-            ),
-            const Spacer(),
-            SignNavigationButtonRow(
-              onBack: () => Navigator.pop(context),
-              onNext: _isFormValid ? _navigateToDocumentUpload : null,
-              nextEnabled: _isFormValid,
-            ),
-            const SizedBox(height: 32),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }

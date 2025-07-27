@@ -7,8 +7,31 @@ import 'package:thirikkale_driver/features/authentication/widgets/upload_screen_
 import 'package:thirikkale_driver/features/authentication/widgets/upload_screen_widgets/guidelines_widget.dart';
 import 'package:thirikkale_driver/widgets/common/custom_appbar.dart';
 
-class ProfilePictureScreen extends StatelessWidget {
-  const ProfilePictureScreen({super.key});
+class ProfilePictureScreen extends StatefulWidget {
+  final VoidCallback onPhotoUploaded;
+
+  const ProfilePictureScreen({super.key, required this.onPhotoUploaded});
+
+  @override
+  State<ProfilePictureScreen> createState() => _ProfilePictureScreenState();
+}
+
+class _ProfilePictureScreenState extends State<ProfilePictureScreen> {
+  Future<void> _handleTakePhoto() async {
+    final result = await Navigator.of(context).push<bool>(
+      NoAnimationPageRoute(
+        builder:
+            (context) => const CameraScreen(documentType: 'profile_picture'),
+      ),
+    );
+
+    if (!mounted) return;
+
+    if (result == true) {
+      widget.onPhotoUploaded();
+      Navigator.of(context).pop();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -69,16 +92,7 @@ class ProfilePictureScreen extends StatelessWidget {
                 width: double.infinity,
                 child: ElevatedButton(
                   style: AppButtonStyles.primaryButton,
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      NoAnimationPageRoute(
-                        builder:
-                            (context) => const CameraScreen(
-                              documentType: 'profile_picture',
-                            ),
-                      ),
-                    );
-                  },
+                  onPressed: _handleTakePhoto,
                   child: const Text('Take Photo'),
                 ),
               ),

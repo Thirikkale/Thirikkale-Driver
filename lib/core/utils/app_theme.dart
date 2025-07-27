@@ -25,7 +25,7 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12.0),
         ),
-        shadowColor: AppColors.black.withOpacity(0.1),
+        shadowColor: AppColors.black.withValues(alpha: 0.1),
       ),
 
       // Bottom navigation bar

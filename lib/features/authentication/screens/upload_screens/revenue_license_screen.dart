@@ -7,8 +7,29 @@ import 'package:thirikkale_driver/features/authentication/widgets/upload_screen_
 import 'package:thirikkale_driver/features/authentication/widgets/upload_screen_widgets/guidelines_widget.dart';
 import 'package:thirikkale_driver/widgets/common/custom_appbar.dart';
 
-class RevenueLicenseScreen extends StatelessWidget {
+class RevenueLicenseScreen extends StatefulWidget {
   const RevenueLicenseScreen({super.key});
+
+  @override
+  State<RevenueLicenseScreen> createState() => _RevenueLicenseScreenState();
+}
+
+class _RevenueLicenseScreenState extends State<RevenueLicenseScreen> {
+  Future<void> _handleTakePhoto() async {
+    final result = await Navigator.of(context).push<bool>(
+      NoAnimationPageRoute(
+        builder:
+            (context) => const CameraScreen(documentType: 'revenue_license'),
+      ),
+    );
+
+    if (!mounted) return;
+
+    // If photo was successfully uploaded, return true to mark as completed
+    if (result == true) {
+      Navigator.of(context).pop(true);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -87,16 +108,7 @@ class RevenueLicenseScreen extends StatelessWidget {
                 width: double.infinity,
                 child: ElevatedButton(
                   style: AppButtonStyles.primaryButton,
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      NoAnimationPageRoute(
-                        builder:
-                            (context) => const CameraScreen(
-                              documentType: 'revenue_license',
-                            ),
-                      ),
-                    );
-                  },
+                  onPressed: _handleTakePhoto,
                   child: const Text('Take Photo'),
                 ),
               ),

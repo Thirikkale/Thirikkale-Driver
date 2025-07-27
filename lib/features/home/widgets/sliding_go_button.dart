@@ -118,7 +118,7 @@ class _SlidingGoButtonState extends State<SlidingGoButton>
     setState(() {
       _dragPosition = (_dragPosition + details.delta.dx).clamp(
         0,
-        widget.width - 60,
+        widget.width - 70,
       );
     });
 
@@ -210,7 +210,10 @@ class _SlidingGoButtonState extends State<SlidingGoButton>
               color: widget.backgroundColor,
               borderRadius: BorderRadius.circular(widget.height / 2),
               border: Border.all(
-                color: widget.isOnline ? AppColors.primaryGreen : AppColors.primaryBlue,
+                color:
+                    widget.isOnline
+                        ? AppColors.primaryGreen
+                        : AppColors.primaryBlue,
                 width: widget.outlineWidth,
               ),
               boxShadow: [
