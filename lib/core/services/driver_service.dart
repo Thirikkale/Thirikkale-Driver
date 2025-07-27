@@ -201,13 +201,14 @@ class DriverService {
   Future<Map<String, dynamic>> registerVehicle({
     required String driverId,
     required String vehicleType,
+    String? registrationNumber,
     required String jwtToken,
   }) async {
     try {
-      print('🚀 Registering new vehicle...');
+      print('🚀 Registering new vehicle... $registrationNumber');
       final url = ApiConfig.registerVehicle(driverId);
       final headers = ApiConfig.getJWTHeaders(jwtToken);
-      final body = jsonEncode({'vehicleType': vehicleType});
+      final body = jsonEncode({'vehicleType': vehicleType, 'vehicleRegistration': registrationNumber!});
 
       final response = await http.post(
         Uri.parse(url),
@@ -651,6 +652,43 @@ class DriverService {
       }
     } catch (e) {
       print('❌ Update primary vehicle type error: $e');
+      return {'success': false, 'error': 'Network error: $e'};
+    }
+  }
+
+  // Update vehicle type for a driver
+  Future<Map<String, dynamic>> updateNewVehicleType({
+    required String driverId,
+    required String vehicleId,
+    required String vehicleType,
+    required String jwtToken,
+  }) async {
+    try {
+      print('🚗 Updating new vehicle type...');
+      final url = ApiConfig.setSecondaryVehicleType(
+        driverId,
+        vehicleId,
+      ); // Using the specific endpoint
+      final headers = ApiConfig.getJWTHeaders(jwtToken);
+      final body = jsonEncode({'vehicleType': vehicleType});
+
+      final response = await http.put(
+        Uri.parse(url),
+        headers: headers,
+        body: body,
+      );
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'message': 'New vehicle type updated'};
+      } else {
+        final responseData = jsonDecode(response.body);
+        return {
+          'success': false,
+          'error': responseData['message'] ?? 'Update failed',
+        };
+      }
+    } catch (e) {
+      print('❌ Update new vehicle type error: $e');
       return {'success': false, 'error': 'Network error: $e'};
     }
   }

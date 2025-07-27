@@ -30,6 +30,7 @@ class AuthProvider extends ChangeNotifier {
   String? _profilePictureUrl;
   double? _rating;
   String? _primaryVehicleId;
+  String? _newVehicleId;
 
   // Getters
   bool get isLoading => _isLoading;
@@ -49,6 +50,7 @@ class AuthProvider extends ChangeNotifier {
   String? get profilePictureUrl => _profilePictureUrl;
   double? get rating => _rating;
   String? get primaryVehicleId => _primaryVehicleId;
+  String? get newVehicleId => _newVehicleId;
 
   bool get hasValidJWTToken {
     if (_accessToken == null || _tokenExpiresAt == null) return false;
@@ -519,6 +521,48 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  // Register a vehicle and set as a primary vehicle
+  Future<String?> registerNewVehicle(String vehicleType, String? registrationNumber) async {
+    final token = await getCurrentToken();
+    if (token == null || _userId == null) {
+      _setError('Session expired. Please login again.');
+      return null;
+    }
+
+    _setLoading(true);
+    try {
+      // Step 1: Register a new vehicle
+      final regResult = await _driverService.registerVehicle(
+        driverId: _userId!,
+        vehicleType: vehicleType,
+        registrationNumber: registrationNumber!,
+        jwtToken: token,
+      );
+
+      if (regResult['success'] != true) {
+        _setError(regResult['error'] ?? 'Failed to register vehicle.');
+        return null;
+      }
+
+      final newVehicleId = regResult['data']['vehicleId'];
+      if (newVehicleId == null) {
+        _setError('Could not get vehicle ID from server.');
+        return null;
+      }
+      // Store the primary vehicle ID and save it
+      _newVehicleId = newVehicleId;
+      await _saveTokensToStorage(); // Your existing method to save state
+
+      print('✅ New vehicle setup complete. Vehicle ID: $_newVehicleId');
+      return _newVehicleId;
+    } catch (e) {
+      _setError('An error occurred during vehicle setup: $e');
+      return null;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
   // Upload document
   Future<bool> uploadDocument({
     required String documentType,
@@ -591,6 +635,41 @@ class AuthProvider extends ChangeNotifier {
     try {
       final result = await _driverService.updatePrimaryVehicleType(
         driverId: _userId!,
+        vehicleType: vehicleType,
+        jwtToken: token,
+      );
+
+      if (result['success'] == true) {
+        // Also update the local state
+        _selectedVehicleType = vehicleType;
+        await _saveTokensToStorage();
+        notifyListeners();
+        return true;
+      } else {
+        _setError(result['error'] ?? 'Failed to update vehicle type');
+        return false;
+      }
+    } catch (e) {
+      _setError('An error occurred: $e');
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Update new vehicle type for the current driver
+  Future<bool> updateNewVehicleType(String vehicleType) async {
+    final token = await getCurrentToken();
+    if (token == null || _userId == null) {
+      _setError('Session expired');
+      return false;
+    }
+
+    _setLoading(true);
+    try {
+      final result = await _driverService.updateNewVehicleType(
+        driverId: _userId!,
+        vehicleId: _newVehicleId!,
         vehicleType: vehicleType,
         jwtToken: token,
       );
@@ -704,6 +783,7 @@ class AuthProvider extends ChangeNotifier {
         'profilePictureUrl': _profilePictureUrl,
         'rating': _rating,
         'primaryVehicleId': _primaryVehicleId,
+        'newVehicleId': _newVehicleId,
       };
 
       await prefs.setString('jwt_tokens', jsonEncode(tokenData));
@@ -735,6 +815,7 @@ class AuthProvider extends ChangeNotifier {
         _profilePictureUrl = tokenData['profilePictureUrl'];
         _rating = tokenData['rating']?.toDouble();
         _primaryVehicleId = tokenData['primaryVehicleId'];
+        _newVehicleId = tokenData['newVehicleId'];
 
         if (tokenData['tokenExpiresAt'] != null) {
           _tokenExpiresAt = DateTime.fromMillisecondsSinceEpoch(
