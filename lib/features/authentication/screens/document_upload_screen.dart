@@ -45,6 +45,7 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
 
   late final List<VehicleType> _vehicleTypes;
   late VehicleType _selectedVehicle;
+  String? _primaryVehicleId;
   bool _isDriverRegistered = false;
   // ignore: unused_field
   bool _isLoadingDocumentStatus = false;
@@ -91,18 +92,23 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
       if (authProvider.isLoggedIn && authProvider.userId != null) {
-        // User is already logged in (auto-login scenario)
-        print('✅ User already logged in, loading document status');
-        setState(() {
-          _isDriverRegistered = true;
-        });
-
-        // Load existing document status from backend
-        _loadDocumentStatus();
+        // The user is logged in. Now, check if they have a vehicle.
+        if (authProvider.primaryVehicleId == null) {
+          // This is a new user who just set their name. Create their vehicle.
+          print('🆕 New user detected. Creating primary vehicle...');
+          _createPrimaryVehicle();
+        } else {
+          // This is a returning user who already has a vehicle.
+          print('✅ Returning user. Loading document status...');
+          setState(() {
+            _isDriverRegistered = true;
+            _primaryVehicleId = authProvider.primaryVehicleId;
+          });
+          _loadDocumentStatus();
+        }
       } else {
-        // New user, complete registration
-        print('🆕 New user, completing registration');
-        _registerDriverWithBackend();
+        // This case should ideally not be hit if your flow is correct
+        print('Auth state is not ready. Waiting...');
       }
     });
   }
@@ -203,41 +209,30 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
     }
   }
 
-  Future<void> _registerDriverWithBackend() async {
+  Future<void> _createPrimaryVehicle() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final backendVehicleType = _mapVehicleTypeForBackend(_selectedVehicle.name);
 
-    // Set vehicle type before registration
-    authProvider.setVehicleType(_selectedVehicle.name);
+    // This function now ONLY creates the vehicle.
+    final newVehicleId = await authProvider.registerAndSetPrimaryVehicle(
+      backendVehicleType,
+    );
 
-    // Check if user is already logged in (auto-login scenario)
-    if (authProvider.isLoggedIn && authProvider.userId != null) {
-      print('✅ User already logged in, skipping registration');
-      if (mounted) {
-        setState(() {
-          _isDriverRegistered = true;
-        });
-      }
-      return;
-    }
-
-    // Complete registration for new users
-    final success = await authProvider.completeDriverRegistration();
-
-    // Check if widget is still mounted before using context
     if (!mounted) return;
 
-    if (success) {
+    if (newVehicleId != null) {
       setState(() {
         _isDriverRegistered = true;
+        _primaryVehicleId = newVehicleId;
       });
       SnackbarHelper.showSuccessSnackBar(
         context,
-        'Registration completed! Please upload your documents.',
+        'Vehicle registered! Please upload your documents.',
       );
     } else {
       SnackbarHelper.showErrorSnackBar(
         context,
-        authProvider.errorMessage ?? 'Registration failed',
+        authProvider.errorMessage ?? 'Could not set up your vehicle.',
       );
     }
   }
@@ -260,9 +255,11 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
     }
   }
 
+  // Handle vehicle type update in dropdown (set Vehicle type for primary vehicle)
   Future<void> _handleVehicleTypeChange(VehicleType? newVehicle) async {
     if (newVehicle == null || newVehicle == _selectedVehicle) return;
 
+    // Always update the local state for a responsive UI
     setState(() {
       _selectedVehicle = newVehicle;
     });
@@ -270,60 +267,29 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final backendVehicleType = _mapVehicleTypeForBackend(newVehicle.name);
 
-    try {
-      if (_isDriverRegistered) {
-        // Driver is already registered, update both locally and on backend
-        debugPrint(
-          '🚗 Updating vehicle type for registered driver: $backendVehicleType',
-        );
+    // IMPORTANT: Only call the backend if a primary vehicle has been created.
+    if (_primaryVehicleId != null) {
+      print('🚗 Primary vehicle exists. Updating type on backend...');
+      final success = await authProvider.updatePrimaryVehicleType(
+        backendVehicleType,
+      );
 
-        final success = await authProvider.updateVehicleType(
-          backendVehicleType,
-        );
+      if (!mounted) return;
 
-        if (!mounted) return;
-
-        if (success) {
-          SnackbarHelper.showSuccessSnackBar(
-            context,
-            'Vehicle type updated to $backendVehicleType',
-          );
-        } else {
-          // Show error if backend update failed
-          SnackbarHelper.showErrorSnackBar(
-            context,
-            authProvider.errorMessage ??
-                'Failed to update vehicle type. Please try again.',
-          );
-
-          // Optionally revert the UI change if backend update failed
-          // setState(() {
-          //   _selectedVehicle = _previousSelectedVehicle;
-          // });
-        }
+      if (success) {
+        SnackbarHelper.showSuccessSnackBar(context, 'Vehicle type updated.');
       } else {
-        // Driver is not registered yet, just set locally
-        debugPrint(
-          '🚗 Setting vehicle type locally for unregistered driver: $backendVehicleType',
-        );
-        authProvider.setVehicleType(backendVehicleType);
-
-        if (mounted) {
-          SnackbarHelper.showSuccessSnackBar(
-            context,
-            'Vehicle type set to $backendVehicleType',
-          );
-        }
-      }
-    } catch (e) {
-      debugPrint('❌ Error handling vehicle type change: $e');
-
-      if (mounted) {
         SnackbarHelper.showErrorSnackBar(
           context,
-          'Failed to update vehicle type. Please try again.',
+          authProvider.errorMessage ?? 'Update failed.',
         );
+        // NOTE: You might want to revert the UI change here if the backend call fails.
       }
+    } else {
+      // If no primary vehicle exists yet, just update the type in the provider's local state.
+      // The _registerDriverAndVehicle function will use this value when it runs.
+      print('🚗 No primary vehicle yet. Setting type locally.');
+      authProvider.setVehicleType(backendVehicleType);
     }
   }
 
@@ -346,42 +312,42 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
 
     // Navigate to driver home screen
     try {
-    // Get auth provider
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    
-    // Fetch latest driver profile data from backend
-    await authProvider.fetchDriverProfile();
-    
-    if (mounted) {
-      Navigator.of(context).pop(); // Close loading dialog
-      
-      SnackbarHelper.showSuccessSnackBar(
-        context,
-        'All documents uploaded! Welcome to Thirikkale Driver!',
-      );
-      
-      // Navigate to driver home screen
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => const DriverHomeScreen()),
-        (route) => false,
-      );
+      // Get auth provider
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+      // Fetch latest driver profile data from backend
+      await authProvider.fetchDriverProfile();
+
+      if (mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
+
+        SnackbarHelper.showSuccessSnackBar(
+          context,
+          'All documents uploaded! Welcome to Thirikkale Driver!',
+        );
+
+        // Navigate to driver home screen
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const DriverHomeScreen()),
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
+
+        SnackbarHelper.showErrorSnackBar(
+          context,
+          'Profile setup completed, but some data might not be synced.',
+        );
+
+        // Still navigate to home screen
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const DriverHomeScreen()),
+          (route) => false,
+        );
+      }
     }
-  } catch (e) {
-    if (mounted) {
-      Navigator.of(context).pop(); // Close loading dialog
-      
-      SnackbarHelper.showErrorSnackBar(
-        context,
-        'Profile setup completed, but some data might not be synced.',
-      );
-      
-      // Still navigate to home screen
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => const DriverHomeScreen()),
-        (route) => false,
-      );
-    }
-  }
   }
 
   @override
@@ -444,7 +410,7 @@ class _DocumentUploadScreenState extends State<DocumentUploadScreen> {
                   itemBuilder: (context, index) {
                     return DocumentListItem(
                       document: _documents[index],
-                      onTap: () {},
+                      primaryVehicleId: _primaryVehicleId,
                       onDocumentCompleted: _markDocumentAsCompleted,
                       onRefreshStatus: _loadDocumentStatus,
                     );
