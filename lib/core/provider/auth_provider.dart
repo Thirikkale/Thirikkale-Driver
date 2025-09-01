@@ -89,6 +89,27 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Check whether user has already loggedIn
+  Future<bool> tryAutoLogin() async {
+    print('Attempting auto-login');
+    await _loadStoredTokens();
+
+    // Check if a token was successfully loaded and is not expired/invalid
+    final validToken = await getCurrentToken();
+
+    if (validToken != null) {
+      print('✅ Auto-login successful. Valid token found.');
+      _isLoggedIn = true;
+      notifyListeners();
+      return true;
+    } else {
+      print('❌ Auto-login failed. Token is invalid or missing.');
+      // Ensure we clean up any partial/invalid data
+      await _clearJWTTokens();
+      return false;
+    }
+  }
+
   // Send OTP for phone verification
   Future<void> sendOTP({
     required String phoneNumber,

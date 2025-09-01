@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:thirikkale_driver/features/authentication/screens/auth_wrapper.dart';
 import 'package:thirikkale_driver/features/authentication/screens/document_upload_screen.dart';
 import 'package:thirikkale_driver/features/authentication/screens/get_started_screen.dart';
 import 'package:thirikkale_driver/features/authentication/screens/mobile_registration_screen.dart';
@@ -15,6 +16,7 @@ import 'package:thirikkale_driver/features/earnings/screens/trips_payment_screen
 
 class AppRoutes {
   static const String initial = '/';
+  static const String getStarted = '/get-started';
   static const String home = '/home';
   static const String driverHome = '/driver-home';
   static const String nameReg = '/name-registration';
@@ -33,12 +35,13 @@ class AppRoutes {
 
   static Map<String, WidgetBuilder> getRoutes() {
     return {
-      initial: (context) => const GetStartedScreen(),
+      initial: (context) => const AuthWrapper(),
+      getStarted: (context) => const GetStartedScreen(),
       home: (context) => const HomeScreen(),
       driverHome: (context) => const DriverHomeScreen(),
       nameReg: (context) => const NameRegistrationScreen(),
       mobileRegistration: (context) => const MobileRegistrationScreen(),
-      documentUpload: (context) => const DocumentUploadScreen(firstName: "Nikila"),
+      documentUpload: (context) => const DocumentUploadScreen(firstName: "Driver"),
       drivePass: (context) => const DrivePassScreen(),
       drivePassHistory: (context) => const DrivePassHistoryScreen(),
       reviews: (context) => const ReviewsScreen(),

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
+import 'package:thirikkale_driver/core/provider/auth_provider.dart';
 import 'package:thirikkale_driver/core/provider/location_provider.dart';
 import 'package:thirikkale_driver/core/provider/driver_provider.dart';
 import 'package:thirikkale_driver/core/provider/ride_provider.dart';
@@ -61,6 +62,9 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeLocation();
+
+      // Fetches latest profile data
+      Provider.of<AuthProvider>(context, listen:false).fetchDriverProfile();
     });
   }
 
