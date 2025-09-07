@@ -2,9 +2,13 @@ class ApiConfig {
   // Base URLs - Update this IP address to your backend server's IP
   // IMPORTANT: Replace 'YOUR_BACKEND_IP' with the actual IP address of your backend device
   // Example: 'http://192.168.1.100:8081/user-service/api/v1'
-  static const String baseUrl = 'http://10.89.163.103:8081/user-service/api/v1';
-  static const String authBaseUrl = '$baseUrl/auth';
-  static const String driversBaseUrl = '$baseUrl/drivers';
+  static const String userServiceBaseUrl =
+      'http://192.168.1.10:8081/user-service/api/v1';
+  static const String rideServiceBaseUrl =
+      'http://192.168.1.10:8082/ride-service/api/v1';
+
+  static const String authBaseUrl = '$userServiceBaseUrl/auth';
+  static const String driversBaseUrl = '$userServiceBaseUrl/drivers';
 
   // Timeout configurations (increased for network latency and document processing)
   static const Duration connectTimeout = Duration(seconds: 45);
@@ -62,6 +66,56 @@ class ApiConfig {
   static const String pendingVerification =
       '$driversBaseUrl/pending-verification';
   static const String availableDrivers = '$driversBaseUrl/available';
+
+  // Ride Management
+  static const String requestRide = '$rideServiceBaseUrl/rides/request';
+  static String acceptRide(String rideId) =>
+      '$rideServiceBaseUrl/rides/$rideId/accept';
+  static String startRide(String rideId) =>
+      '$rideServiceBaseUrl/rides/$rideId/start';
+  static String completeRide(String rideId) =>
+      '$rideServiceBaseUrl/rides/$rideId/complete';
+  static String cancelRide(String rideId) =>
+      '$rideServiceBaseUrl/rides/$rideId/cancel';
+  static String rateRide(String rideId) =>
+      '$rideServiceBaseUrl/rides/$rideId/rate';
+
+  // Driver Location & Availability
+  static String updateDriverLocation(String driverId) =>
+      '$rideServiceBaseUrl/drivers/$driverId/location';
+  static String updateDriverAvailability(String driverId) =>
+      '$rideServiceBaseUrl/drivers/$driverId/availability';
+  static String getDriverLocation(String driverId) =>
+      '$rideServiceBaseUrl/drivers/$driverId/location';
+  static const String getNearbyDrivers = '$rideServiceBaseUrl/drivers/nearby';
+  static String removeDriverLocation(String driverId) =>
+      '$rideServiceBaseUrl/drivers/$driverId/location';
+  static String driverHeartbeat(String driverId) =>
+      '$rideServiceBaseUrl/drivers/$driverId/heartbeat';
+
+  // Ride History & Status
+  static String getDriverRides(String driverId) =>
+      '$rideServiceBaseUrl/rides/driver/$driverId';
+  static String getActiveRides(String userId) =>
+      '$rideServiceBaseUrl/rides/active/$userId';
+
+  // Payment management
+  static String getDriverPayments(String driverId) =>
+      '$rideServiceBaseUrl/payments/driver/$driverId';
+  static String getDriverEarnings(String driverId) =>
+      '$rideServiceBaseUrl/payments/driver/$driverId/earnings';
+
+  // Pub-sub Ride system
+  static String subscribeDriver(String driverId) =>
+      '$rideServiceBaseUrl/pubsub/drivers/$driverId/subscribe';
+  static String unsubscribeDriver(String driverId) =>
+      '$rideServiceBaseUrl/pubsub/drivers/$driverId/unsubscribe';
+  static String updatePubSubDriverLocation(String driverId) =>
+      '$rideServiceBaseUrl/pubsub/drivers/$driverId/location';
+  static String acceptRideRequest(String requestId) =>
+      '$rideServiceBaseUrl/pubsub/ride-requests/$requestId/accept';
+  static String rejectRideRequest(String requestId) =>
+      '$rideServiceBaseUrl/pubsub/ride-requests/$requestId/reject';
 
   // Headers
   static Map<String, String> get defaultHeaders => {
@@ -130,6 +184,49 @@ class DriverEndpoints {
   static const String pendingDocs = ApiConfig.pendingDocuments;
   static const String pendingVerification = ApiConfig.pendingVerification;
   static const String available = ApiConfig.availableDrivers;
+
+  // Ride Management
+  static String acceptRide(String rideId) => ApiConfig.acceptRide(rideId);
+  static String startRide(String rideId) => ApiConfig.startRide(rideId);
+  static String completeRide(String rideId) => ApiConfig.completeRide(rideId);
+  static String cancelRide(String rideId) => ApiConfig.cancelRide(rideId);
+  static String rateRide(String rideId) => ApiConfig.rateRide(rideId);
+
+  // Location & Availability
+  static String updateLocation(String driverId) =>
+      ApiConfig.updateDriverLocation(driverId);
+  static String updateAvailability(String driverId) =>
+      ApiConfig.updateDriverAvailability(driverId);
+  static String getLocation(String driverId) =>
+      ApiConfig.getDriverLocation(driverId);
+  static String removeLocation(String driverId) =>
+      ApiConfig.removeDriverLocation(driverId);
+  static String heartbeat(String driverId) =>
+      ApiConfig.driverHeartbeat(driverId);
+
+  // Ride History
+  static String rideHistory(String driverId) =>
+      ApiConfig.getDriverRides(driverId);
+  static String activeRides(String driverId) =>
+      ApiConfig.getActiveRides(driverId);
+
+  // Earnings & Payments
+  static String payments(String driverId) =>
+      ApiConfig.getDriverPayments(driverId);
+  static String earnings(String driverId) =>
+      ApiConfig.getDriverEarnings(driverId);
+
+  // PubSub System
+  static String subscribe(String driverId) =>
+      ApiConfig.subscribeDriver(driverId);
+  static String unsubscribe(String driverId) =>
+      ApiConfig.unsubscribeDriver(driverId);
+  static String pubSubLocation(String driverId) =>
+      ApiConfig.updatePubSubDriverLocation(driverId);
+  static String acceptRideRequest(String requestId) =>
+      ApiConfig.acceptRideRequest(requestId);
+  static String rejectRideRequest(String requestId) =>
+      ApiConfig.rejectRideRequest(requestId);
 }
 
 // Driver profile completion steps

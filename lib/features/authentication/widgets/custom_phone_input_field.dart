@@ -30,9 +30,7 @@ class _CustomPhoneInputFieldState extends State<CustomPhoneInputField> {
       validator: widget.validator,
       keyboardType: TextInputType.phone,
       cursorColor: AppColors.primaryBlue,
-      style: const TextStyle(
-        fontWeight: FontWeight.w600
-      ),
+      style: const TextStyle(fontWeight: FontWeight.w600),
       onChanged: (value) {
         // Extract clean number and pass it to parent
         if (widget.onChanged != null) {
@@ -46,7 +44,6 @@ class _CustomPhoneInputFieldState extends State<CustomPhoneInputField> {
       decoration: InputDecoration(
         filled: true,
         fillColor: Colors.white,
-
         prefixIcon: const Icon(Icons.phone),
         prefixText: '${widget.countryCode} ',
         prefixStyle: const TextStyle(
@@ -54,7 +51,6 @@ class _CustomPhoneInputFieldState extends State<CustomPhoneInputField> {
           fontSize: 16,
           fontWeight: FontWeight.w500,
         ),
-
         labelText: widget.label,
         labelStyle: const TextStyle(
           color: AppColors.grey,

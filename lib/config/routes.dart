@@ -4,7 +4,6 @@ import 'package:thirikkale_driver/features/authentication/screens/document_uploa
 import 'package:thirikkale_driver/features/authentication/screens/get_started_screen.dart';
 import 'package:thirikkale_driver/features/authentication/screens/mobile_registration_screen.dart';
 import 'package:thirikkale_driver/features/authentication/screens/name_registration_screen.dart';
-import 'package:thirikkale_driver/features/home/screens/home_screen.dart';
 import 'package:thirikkale_driver/features/home/screens/driver_home_screen.dart';
 import 'package:thirikkale_driver/features/drivepass/screens/drive_pass_screen.dart';
 import 'package:thirikkale_driver/features/drivepass/screens/drive_pass_history_screen.dart';
@@ -17,7 +16,6 @@ import 'package:thirikkale_driver/features/earnings/screens/trips_payment_screen
 class AppRoutes {
   static const String initial = '/';
   static const String getStarted = '/get-started';
-  static const String home = '/home';
   static const String driverHome = '/driver-home';
   static const String nameReg = '/name-registration';
   static const String mobileRegistration = '/mobile-registration';
@@ -37,7 +35,6 @@ class AppRoutes {
     return {
       initial: (context) => const AuthWrapper(),
       getStarted: (context) => const GetStartedScreen(),
-      home: (context) => const HomeScreen(),
       driverHome: (context) => const DriverHomeScreen(),
       nameReg: (context) => const NameRegistrationScreen(),
       mobileRegistration: (context) => const MobileRegistrationScreen(),

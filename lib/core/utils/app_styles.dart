@@ -25,6 +25,7 @@ class AppColors {
   static const Color success = Color(0xFF198754);
   static const Color warning = Color(0xFFFFC107);
   static const Color divider = Color(0xFFE9ECEF);
+  static const Color offlineBtn = Color(0xFFFF3B30);
 }
 
 class AppTextStyles {

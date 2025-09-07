@@ -18,10 +18,10 @@ import 'package:thirikkale_driver/core/utils/snackbar_helper.dart';
 import 'package:thirikkale_driver/features/home/widgets/driver_sidebar.dart';
 import 'package:thirikkale_driver/features/home/widgets/location_error.dart';
 import 'package:thirikkale_driver/features/home/widgets/location_search_widget.dart';
-import 'package:thirikkale_driver/features/home/widgets/ride_action_buttons.dart';
-// import 'package:thirikkale_driver/features/home/widgets/driver_status_widget.dart';
-// import 'package:thirikkale_driver/features/home/widgets/earnings_bottom_sheet.dart';
+import 'package:thirikkale_driver/features/home/widgets/ride_details_bottom_sheet.dart';
 import 'package:thirikkale_driver/features/home/widgets/sliding_go_button.dart';
+// Import the new bottom sheet widget
+import 'package:thirikkale_driver/features/home/widgets/online_driver_bottom_sheet.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class DriverHomeScreen extends StatefulWidget {
@@ -46,6 +46,10 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   // Search state
   String? _selectedDestination;
   LatLng? _destinationLocation;
+  String? _currentlyDisplayedRideId;
+
+  final DraggableScrollableController _onlineSheetController =
+      DraggableScrollableController();
 
   @override
   void initState() {
@@ -64,7 +68,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       _initializeLocation();
 
       // Fetches latest profile data
-      Provider.of<AuthProvider>(context, listen:false).fetchDriverProfile();
+      Provider.of<AuthProvider>(context, listen: false).fetchDriverProfile();
     });
   }
 
@@ -245,6 +249,16 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     _animateToShowBothLocations();
   }
 
+  // Clear created polyline by search
+  void _clearSearchRoutes() {
+    setState(() {
+      _selectedDestination = null;
+      _destinationLocation = null;
+      _polylines.clear();
+      _markers.removeWhere((marker) => marker.markerId.value == 'destination');
+    });
+  }
+
   void _createPolyline() async {
     final locationProvider = Provider.of<LocationProvider>(
       context,
@@ -306,29 +320,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   void _toggleOnlineStatus() {
     final driverProvider = Provider.of<DriverProvider>(context, listen: false);
     driverProvider.toggleOnlineStatus();
-
-    if (driverProvider.isOnline) {
-      _showGoOnlineBottomSheet();
-    }
   }
-
-  void _showGoOnlineBottomSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => const GoOnlineBottomSheet(),
-    );
-  }
-
-  // void _showEarningsBottomSheet() {
-  //   showModalBottomSheet(
-  //     context: context,
-  //     isScrollControlled: true,
-  //     backgroundColor: Colors.transparent,
-  //     builder: (context) => const EarningsBottomSheet(),
-  //   );
-  // }
 
   LatLng _getDefaultLocation() {
     const defaultLocation = LatLng(6.9271, 79.8612); // Colombo, Sri Lanka
@@ -349,8 +341,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     return _getDefaultLocation();
   }
 
-  // Create ride routes
-  // Updated createRideRoutes method
   void _createRideRoutes() async {
     final locationProvider = Provider.of<LocationProvider>(
       context,
@@ -367,24 +357,18 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         currentLocation['longitude'],
       );
 
-      // Clear existing markers and polylines
       setState(() {
         _markers.clear();
         _polylines.clear();
       });
 
-      // Add driver marker
       _markers.add(MapService.createCurrentLocationMarker(driverLocation));
-
-      // Add pickup marker
       _markers.add(
         MapService.createPickupMarker(
           rideRequest.pickupLocation,
           rideRequest.pickupAddress,
         ),
       );
-
-      // Add destination marker
       _markers.add(
         MapService.createDropMarker(
           rideRequest.destinationLocation,
@@ -392,13 +376,10 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         ),
       );
 
-      // Create route from driver to pickup
       final driverToPickupRoute = await MapService.createDriverToPickupRoute(
         driverLocation,
         rideRequest.pickupLocation,
       );
-
-      // Create route from pickup to destination
       final pickupToDestinationRoute =
           await MapService.createPickupToDestinationRoute(
             rideRequest.pickupLocation,
@@ -415,7 +396,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
           }
         });
 
-        // Animate to show all locations with proper error handling
         try {
           final GoogleMapController controller =
               await _mapControllerCompleter.future;
@@ -432,7 +412,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     }
   }
 
-  // Rider pickup
   void _navigateToPickup() async {
     final rideProvider = Provider.of<RideProvider>(context, listen: false);
     final rideRequest = rideProvider.currentRideRequest;
@@ -450,6 +429,14 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   }
 
   void _showTestRideRequest() {
+    final driverProvider = Provider.of<DriverProvider>(context, listen: false);
+    if (!driverProvider.isOnline) {
+      SnackbarHelper.showErrorSnackBar(
+        context,
+        'You must be online to receive ride requests.',
+      );
+      return;
+    }
     final rideRequest = RideRequestService().generateDummyRideRequest();
     RideRequestService().showRideRequest(context, rideRequest);
   }
@@ -459,8 +446,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     return AnnotatedRegion(
       value: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light, // White icons
-        statusBarBrightness: Brightness.dark, // For iOS
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
       ),
       child: Scaffold(
         key: _scaffoldKey,
@@ -482,10 +469,31 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                     )
                     : null;
 
-            // Listen to ride provider changes
+            // --- FIX: Logic to draw/clear routes only once per ride state change ---
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (rideProvider.isRideAccepted) {
+              // Condition to DRAW routes:
+              // A ride is accepted AND its ID is different from the one we've already drawn.
+              if (rideProvider.isRideAccepted &&
+                  _currentlyDisplayedRideId !=
+                      rideProvider.currentRideRequest?.rideId) {
                 _createRideRoutes();
+                // Mark this ride's ID as the one being displayed.
+                _currentlyDisplayedRideId =
+                    rideProvider.currentRideRequest?.rideId;
+              }
+              // Condition to CLEAR routes:
+              // There is no accepted ride, but we still have a stored ride ID (meaning a ride just ended).
+              else if (!rideProvider.isRideAccepted &&
+                  _currentlyDisplayedRideId != null) {
+                setState(() {
+                  _polylines.clear();
+                  // Keep the current location marker, remove others.
+                  _markers.removeWhere(
+                    (m) => m.markerId.value != 'current_location',
+                  );
+                });
+                // Reset the stored ride ID.
+                _currentlyDisplayedRideId = null;
               }
             });
 
@@ -498,12 +506,11 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                       onMapCreated: _onMapCreated,
                       initialCameraPosition: CameraPosition(
                         target: _getInitialCameraPosition(),
-                        zoom: 14.0, // Zoom in for more street-level detail
+                        zoom: 14.0,
                       ),
                       markers: _markers,
                       polylines: _polylines,
-                      myLocationEnabled:
-                          true, // Disable default location dot since we have custom marker
+                      myLocationEnabled: true,
                       myLocationButtonEnabled: false,
                       mapType: MapType.normal,
                       zoomControlsEnabled: false,
@@ -513,7 +520,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                       tiltGesturesEnabled: true,
                       zoomGesturesEnabled: true,
                       mapToolbarEnabled: false,
-                      trafficEnabled: false, // Can be enabled if needed
+                      trafficEnabled: false,
                     ),
 
                 // Top overlay with search and menu
@@ -537,46 +544,38 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                         padding: const EdgeInsets.all(
                           AppDimensions.pageHorizontalPadding,
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Row(
                           children: [
-                            Row(
-                              children: [
-                                // Menu button
-                                GestureDetector(
-                                  onTap:
-                                      () =>
-                                          _scaffoldKey.currentState
-                                              ?.openDrawer(),
-                                  child: Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.white,
-                                      borderRadius: BorderRadius.circular(12),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withOpacity(0.1),
-                                          blurRadius: 8,
-                                          offset: const Offset(0, 2),
-                                        ),
-                                      ],
+                            GestureDetector(
+                              onTap:
+                                  () => _scaffoldKey.currentState?.openDrawer(),
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: AppColors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.1),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
                                     ),
-                                    child: const Icon(
-                                      Icons.menu,
-                                      color: AppColors.textPrimary,
-                                      size: 24,
-                                    ),
-                                  ),
+                                  ],
                                 ),
-                                const SizedBox(width: 16),
-                                // Search bar
-                                Expanded(
-                                  child: LocationSearchWidget(
-                                    onLocationSelected: _onLocationSelected,
-                                    currentUserLocation: currentUserPosition,
-                                  ),
+                                child: const Icon(
+                                  Icons.menu,
+                                  color: AppColors.textPrimary,
+                                  size: 24,
                                 ),
-                              ],
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: LocationSearchWidget(
+                                onLocationSelected: _onLocationSelected,
+                                currentUserLocation: currentUserPosition,
+                                onClear: _clearSearchRoutes,
+                              ),
                             ),
                           ],
                         ),
@@ -599,27 +598,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                     ),
                   ),
                 ),
-
-                // Ride action buttons (shown when ride is accepted)
-                if (rideProvider.isRideAccepted)
-                  Positioned(
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    child: RideActionButtons(
-                      rideRequest: rideProvider.currentRideRequest!,
-                      onNavigate: _navigateToPickup,
-                      onArrived: () => rideProvider.arriveAtPickup(),
-                      onStartRide: () => rideProvider.startRide(),
-                      onCompleteRide: () => rideProvider.completeRide(),
-                      isEnRouteToPickup:
-                          rideProvider.rideStatus == RideStatus.enRouteToPickup,
-                      isAtPickup:
-                          rideProvider.rideStatus == RideStatus.arrivedAtPickup,
-                      isRideStarted:
-                          rideProvider.rideStatus == RideStatus.rideStarted,
-                    ),
-                  ),
 
                 // Navigate button (shows when destination is selected)
                 if (_selectedDestination != null)
@@ -646,28 +624,19 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                     ),
                   ),
 
-                // // Driver status widget (top right)
-                // Positioned(
-                //   top: MediaQuery.of(context).padding.top + 80,
-                //   right: AppDimensions.pageHorizontalPadding,
-                //   child: DriverStatusWidget(
-                //     isOnline: driverProvider.isOnline,
-                //     onTap: _showEarningsBottomSheet,
-                //   ),
-                // ),
-
-                // Go online/offline button (bottom center)
-                Positioned(
-                  bottom: 100,
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: SlidingGoButton(
-                      isOnline: driverProvider.isOnline,
-                      onToggle: _toggleOnlineStatus,
+                // "Go Online" button - only shown when offline and not in a ride
+                if (!driverProvider.isOnline && !rideProvider.isRideAccepted)
+                  Positioned(
+                    bottom: 100,
+                    left: 0,
+                    right: 0,
+                    child: Center(
+                      child: SlidingGoButton(
+                        isOnline: driverProvider.isOnline,
+                        onToggle: _toggleOnlineStatus,
+                      ),
                     ),
                   ),
-                ),
 
                 // Current location button
                 Positioned(
@@ -697,6 +666,25 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                       },
                     ),
                   ),
+
+                // Ride action buttons (shown when ride is accepted)
+                // Placed here to be on top of the map but below the online sheet
+                if (rideProvider.isRideAccepted)
+                  RiderDetailsBottomSheet(
+                    rideRequest: rideProvider.currentRideRequest!,
+                    onNavigate: _navigateToPickup,
+                    onArrived: () => rideProvider.arriveAtPickup(),
+                    onStartRide: () => rideProvider.startRide(),
+                    onCompleteRide: () => rideProvider.completeRide(),
+                    isEnRouteToPickup:
+                        rideProvider.rideStatus == RideStatus.enRouteToPickup,
+                    isAtPickup:
+                        rideProvider.rideStatus == RideStatus.arrivedAtPickup,
+                    isRideStarted:
+                        rideProvider.rideStatus == RideStatus.rideStarted,
+                  ),
+                if (driverProvider.isOnline && !rideProvider.isRideAccepted)
+                  OnlineDriverBottomSheet(controller: _onlineSheetController),
               ],
             );
           },
@@ -713,71 +701,5 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         destinationName: _selectedDestination,
       );
     }
-  }
-}
-
-// Go Online Bottom Sheet
-class GoOnlineBottomSheet extends StatelessWidget {
-  const GoOnlineBottomSheet({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
-        ),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 40,
-            height: 4,
-            margin: const EdgeInsets.only(top: 12, bottom: 20),
-            decoration: BoxDecoration(
-              color: AppColors.lightGrey,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppDimensions.pageHorizontalPadding,
-            ),
-            child: Column(
-              children: [
-                const Icon(
-                  Icons.check_circle,
-                  color: AppColors.success,
-                  size: 64,
-                ),
-                const SizedBox(height: 16),
-                Text('You\'re now online!', style: AppTextStyles.heading2),
-                const SizedBox(height: 8),
-                Text(
-                  'You\'ll start receiving ride requests from nearby passengers.',
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 32),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: AppButtonStyles.primaryButton,
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Got it'),
-                  ),
-                ),
-                const SizedBox(height: 32),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }

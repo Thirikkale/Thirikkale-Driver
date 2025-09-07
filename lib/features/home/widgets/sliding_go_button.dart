@@ -24,7 +24,7 @@ class SlidingGoButton extends StatefulWidget {
     this.width = 300,
     this.height = 70,
     this.animationDuration = const Duration(milliseconds: 300),
-    this.onlineColor = AppColors.primaryGreen,
+    this.onlineColor = AppColors.offlineBtn,
     this.offlineColor = AppColors.primaryBlue,
     this.backgroundColor = AppColors.surfaceLight,
     this.outlineWidth = 2.0,
@@ -212,7 +212,7 @@ class _SlidingGoButtonState extends State<SlidingGoButton>
               border: Border.all(
                 color:
                     widget.isOnline
-                        ? AppColors.primaryGreen
+                        ? AppColors.offlineBtn
                         : AppColors.primaryBlue,
                 width: widget.outlineWidth,
               ),

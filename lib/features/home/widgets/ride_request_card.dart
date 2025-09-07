@@ -14,7 +14,7 @@ class RideRequestCard extends StatefulWidget {
     required this.rideRequest,
     required this.onAccept,
     required this.onDecline,
-    this.timeoutSeconds = 30,
+    this.timeoutSeconds = 20,
   });
 
   @override
@@ -457,7 +457,7 @@ class _RideRequestCardState extends State<RideRequestCard>
                       child: ElevatedButton(
                         onPressed: widget.onAccept,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.success,
+                          backgroundColor: AppColors.primaryBlue,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
