@@ -1,5 +1,3 @@
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-
 class RideRequest {
   final String rideId;
   final String riderId;
@@ -41,32 +39,64 @@ class RideRequest {
     this.specialInstructions,
   });
 
-  // Convert from API response
-  factory RideRequest.fromJson(Map<String, dynamic> json) {
-    return RideRequest(
-      rideId: json['ride_id'] ?? '',
-      riderId: json['rider_id'] ?? '',
-      riderName: json['rider_name'] ?? '',
-      riderPhone: json['rider_phone'] ?? '',
-      riderRating: (json['rider_rating'] ?? 0.0).toDouble(),
-      pickupAddress: json['pickup_address'] ?? '',
-      destinationAddress: json['destination_address'] ?? '',
-      pickupLat: (json['pickup_lat'] ?? 0.0).toDouble(),
-      pickupLng: (json['pickup_lng'] ?? 0.0).toDouble(),
-      destinationLat: (json['destination_lat'] ?? 0.0).toDouble(),
-      destinationLng: (json['destination_lng'] ?? 0.0).toDouble(),
-      distanceKm: (json['distance_km'] ?? 0.0).toDouble(),
-      estimatedMinutes: json['estimated_minutes'] ?? 0,
-      fareAmount: (json['fare_amount'] ?? 0.0).toDouble(),
-      paymentMethod: json['payment_method'] ?? '',
-      riderProfileImageUrl: json['rider_profile_image_url'],
-      requestTimestamp: json['request_timestamp'] ?? '',
-      specialInstructions: json['special_instructions'],
-    );
-  }
-
-  // Helper getters for UI
+  // Helper getters
   LatLng get pickupLocation => LatLng(pickupLat, pickupLng);
   LatLng get destinationLocation => LatLng(destinationLat, destinationLng);
   DateTime get requestTime => DateTime.parse(requestTimestamp);
+
+  // Create from backend JSON response
+  factory RideRequest.fromBackendJson(Map<String, dynamic> json) {
+    return RideRequest(
+      rideId: json['id'] ?? '',
+      riderId: json['userId'] ?? '',
+      riderName: json['riderName'] ?? 'Unknown Rider',
+      riderPhone: json['riderPhone'] ?? '+94000000000',
+      riderRating: (json['riderRating'] ?? 4.5).toDouble(),
+      pickupAddress: json['pickupLocation'] ?? '',
+      destinationAddress: json['dropoffLocation'] ?? '',
+      pickupLat: (json['pickupLatitude'] ?? 0.0).toDouble(),
+      pickupLng: (json['pickupLongitude'] ?? 0.0).toDouble(),
+      destinationLat: (json['dropoffLatitude'] ?? 0.0).toDouble(),
+      destinationLng: (json['dropoffLongitude'] ?? 0.0).toDouble(),
+      distanceKm: (json['estimatedDistance'] ?? 0.0).toDouble(),
+      estimatedMinutes: (json['estimatedDuration'] ?? 0).round(),
+      fareAmount: (json['estimatedFare'] ?? 0.0).toDouble(),
+      paymentMethod: json['paymentMethod'] ?? 'Cash',
+      riderProfileImageUrl: json['riderProfileImageUrl'],
+      requestTimestamp: json['requestTime'] ?? DateTime.now().toIso8601String(),
+      specialInstructions: json['specialRequests'],
+    );
+  }
+
+  // Convert to JSON for API requests
+  Map<String, dynamic> toJson() {
+    return {
+      'rideId': rideId,
+      'riderId': riderId,
+      'riderName': riderName,
+      'riderPhone': riderPhone,
+      'riderRating': riderRating,
+      'pickupAddress': pickupAddress,
+      'destinationAddress': destinationAddress,
+      'pickupLat': pickupLat,
+      'pickupLng': pickupLng,
+      'destinationLat': destinationLat,
+      'destinationLng': destinationLng,
+      'distanceKm': distanceKm,
+      'estimatedMinutes': estimatedMinutes,
+      'fareAmount': fareAmount,
+      'paymentMethod': paymentMethod,
+      'riderProfileImageUrl': riderProfileImageUrl,
+      'requestTimestamp': requestTimestamp,
+      'specialInstructions': specialInstructions,
+    };
+  }
+}
+
+// Add LatLng class if not already imported
+class LatLng {
+  final double latitude;
+  final double longitude;
+
+  const LatLng(this.latitude, this.longitude);
 }

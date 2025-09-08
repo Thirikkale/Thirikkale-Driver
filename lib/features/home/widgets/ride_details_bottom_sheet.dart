@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:thirikkale_driver/core/provider/auth_provider.dart';
 import 'package:thirikkale_driver/core/provider/ride_provider.dart';
 import 'package:thirikkale_driver/core/utils/app_dimensions.dart';
 import 'package:thirikkale_driver/core/utils/app_styles.dart';
@@ -320,12 +321,25 @@ class _RiderDetailsBottomSheetState extends State<RiderDetailsBottomSheet> {
             onPressed:
                 _selectedReason == null
                     ? null
-                    : () {
+                    : () async {
                       final rideProvider = Provider.of<RideProvider>(
                         context,
                         listen: false,
                       );
-                      rideProvider.declineRide();
+                      final authProvider = Provider.of<AuthProvider>(
+                        context,
+                        listen: false,
+                      );
+
+                      final driverId = authProvider.userId;
+                      final accessToken = await authProvider.getCurrentToken();
+
+                      await rideProvider.declineRide(
+                        _selectedReason,
+                        driverId,
+                        accessToken,
+                      );
+
                       print('Ride cancelled with reason: $_selectedReason');
                     },
             style: ElevatedButton.styleFrom(

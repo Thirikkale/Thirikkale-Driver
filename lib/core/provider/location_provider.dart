@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:thirikkale_driver/core/services/location_service.dart';
 import 'package:thirikkale_driver/core/services/places_api_service.dart';
 
 class LocationProvider extends ChangeNotifier {
   // Current location state
   Map<String, dynamic>? _currentLocation;
+  Position? _currentPosition;
   bool _isLoadingCurrentLocation = false;
   String? _locationError;
 
@@ -18,6 +20,7 @@ class LocationProvider extends ChangeNotifier {
 
   // Getters
   Map<String, dynamic>? get currentLocation => _currentLocation;
+  Position? get currentPosition => _currentPosition; 
   bool get isLoadingCurrentLocation => _isLoadingCurrentLocation;
   String? get locationError => _locationError;
 
@@ -35,6 +38,25 @@ class LocationProvider extends ChangeNotifier {
 
   void _setCurrentLocation(Map<String, dynamic>? location) {
     _currentLocation = location;
+
+    // Also update the Position object
+    if (location != null) {
+      _currentPosition = Position(
+        latitude: location['latitude'],
+        longitude: location['longitude'],
+        timestamp: DateTime.now(),
+        accuracy: location['accuracy'] ?? 0.0,
+        altitude: location['altitude'] ?? 0.0,
+        altitudeAccuracy: location['altitudeAccuracy'] ?? 0.0,
+        heading: location['heading'] ?? 0.0,
+        headingAccuracy: location['headingAccuracy'] ?? 0.0,
+        speed: location['speed'] ?? 0.0,
+        speedAccuracy: location['speedAccuracy'] ?? 0.0,
+      );
+    } else {
+      _currentPosition = null;
+    }
+
     notifyListeners();
   }
 
@@ -70,19 +92,27 @@ class LocationProvider extends ChangeNotifier {
     _searchError = null;
   }
 
+  // Check if location is available
+  bool get isLocationAvailable =>
+      _currentLocation != null && _currentPosition != null;
+
   // Current Location Methods
   Future<void> getCurrentLocation() async {
+    print('🔍 LocationProvider: Getting current location...');
     _setLoadingCurrentLocation(true);
     _setLocationError(null);
 
     try {
       final location = await LocationService.getCurrentLocation();
+      print('✅ LocationProvider: Location obtained: ${location}');
       _setCurrentLocation(location);
       _setLocationError(null);
     } on LocationServiceException catch (e) {
+      print('❌ LocationProvider: LocationServiceException: ${e.message}');
       _setLocationError(e.message);
       _setCurrentLocation(null);
     } catch (e) {
+      print('❌ LocationProvider: Generic error: ${e.toString()}');
       _setLocationError('Failed to get location: ${e.toString()}');
       _setCurrentLocation(null);
     } finally {
@@ -197,10 +227,25 @@ class LocationProvider extends ChangeNotifier {
   }
 
   // Update Current Location (safe for build phase)
+  // Update Current Location (safe for build phase)
   void updateCurrentLocation(Map<String, dynamic> location) {
     // Store location immediately without notifying
     _currentLocation = location;
-    
+
+    // Also update Position object
+    _currentPosition = Position(
+      latitude: location['latitude'],
+      longitude: location['longitude'],
+      timestamp: DateTime.now(),
+      accuracy: location['accuracy'] ?? 0.0,
+      altitude: location['altitude'] ?? 0.0,
+      altitudeAccuracy: location['altitudeAccuracy'] ?? 0.0,
+      heading: location['heading'] ?? 0.0,
+      headingAccuracy: location['headingAccuracy'] ?? 0.0,
+      speed: location['speed'] ?? 0.0,
+      speedAccuracy: location['speedAccuracy'] ?? 0.0,
+    );
+  
     // Schedule notification for after the current build phase
     WidgetsBinding.instance.addPostFrameCallback((_) {
       notifyListeners();
