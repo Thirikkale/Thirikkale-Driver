@@ -3,9 +3,11 @@ class ApiConfig {
   // IMPORTANT: Replace 'YOUR_BACKEND_IP' with the actual IP address of your backend device
   // Example: 'http://192.168.1.100:8081/user-service/api/v1'
   static const String userServiceBaseUrl =
-      'http://192.168.1.10:8081/user-service/api/v1';
+      'http://10.249.61.103:8081/user-service/api/v1';
   static const String rideServiceBaseUrl =
-      'http://192.168.1.10:8082/ride-service/api/v1';
+      'http://10.249.61.103:8082/ride-service/api/v1';
+
+  static const String webSocketUrl = 'ws://10.249.61.103:8082';
 
   static const String authBaseUrl = '$userServiceBaseUrl/auth';
   static const String driversBaseUrl = '$userServiceBaseUrl/drivers';

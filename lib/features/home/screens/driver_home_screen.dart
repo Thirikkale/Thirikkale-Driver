@@ -15,6 +15,8 @@ import 'package:thirikkale_driver/core/utils/app_dimensions.dart';
 import 'package:thirikkale_driver/core/utils/app_styles.dart';
 import 'package:thirikkale_driver/core/utils/navigation_utils.dart';
 import 'package:thirikkale_driver/core/utils/snackbar_helper.dart';
+import 'package:thirikkale_driver/features/home/models/ride_request_model.dart'
+    hide LatLng;
 import 'package:thirikkale_driver/features/home/widgets/driver_sidebar.dart';
 import 'package:thirikkale_driver/features/home/widgets/location_error.dart';
 import 'package:thirikkale_driver/features/home/widgets/location_search_widget.dart';
@@ -47,6 +49,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   LatLng? _destinationLocation;
   String? _currentlyDisplayedRideId;
 
+  bool _isShowingRideRequestOverlay = false;
+
   final DraggableScrollableController _onlineSheetController =
       DraggableScrollableController();
 
@@ -73,35 +77,272 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   }
 
   void _setupRideRequestListener() {
-    // final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final rideProvider = Provider.of<RideProvider>(context, listen: false);
     final driverProvider = Provider.of<DriverProvider>(context, listen: false);
 
-    // Listen to driver online status changes
+    // Add listener for driver status changes
     driverProvider.addListener(_handleDriverStatusChange);
 
-    // Listen for new ride requests
+    // Enhanced ride request listener with proper state handling
     rideProvider.addListener(() {
+      // Show ride request overlay when new request received
       if (rideProvider.rideStatus == RideStatus.requestReceived &&
-          rideProvider.currentRideRequest != null) {
-        // Show ride request overlay
-        RideRequestService().showRideRequest(
-          context,
-          rideProvider.currentRideRequest!,
-        );
+          rideProvider.currentRideRequest != null &&
+          !rideProvider.isAcceptingRide &&
+          !_isShowingRideRequestOverlay) {
+        _showRideRequestOverlay(rideProvider.currentRideRequest!);
+      }
+
+      // Handle successful ride acceptance
+      if (rideProvider.rideStatus == RideStatus.accepted &&
+          rideProvider.currentRideRequest != null &&
+          _currentlyDisplayedRideId !=
+              rideProvider.currentRideRequest?.rideId) {
+        // Hide overlay if still showing
+        if (_isShowingRideRequestOverlay) {
+          RideRequestService().hideOverlay();
+          _isShowingRideRequestOverlay = false;
+        }
+
+        // Show success message
+        _showSuccessMessage('Ride accepted successfully!');
+
+        // Automatically create routes and show ride details
+        _createRideRoutes();
+        _currentlyDisplayedRideId = rideProvider.currentRideRequest?.rideId;
+      }
+
+      // Handle ride completion/cancellation
+      if (rideProvider.rideStatus == RideStatus.idle &&
+          _currentlyDisplayedRideId != null) {
+        // Clear routes and reset map
+        setState(() {
+          _polylines.clear();
+          _markers.removeWhere((m) => m.markerId.value != 'current_location');
+        });
+        _currentlyDisplayedRideId = null;
+        _animateToCurrentLocation();
+      }
+
+      // Handle acceptance errors
+      if (rideProvider.lastAcceptanceError != null) {
+        _handleAcceptanceError(rideProvider.lastAcceptanceError!);
+        rideProvider.clearAcceptanceError();
       }
     });
   }
 
+  void _showRideRequestOverlay(RideRequest rideRequest) {
+    _isShowingRideRequestOverlay = true;
+
+    RideRequestService().showRideRequest(
+      context,
+      rideRequest,
+      () => _handleAcceptRide(rideRequest),
+      () => _handleDeclineRide(rideRequest),
+    );
+  }
+
+  Future<void> _handleAcceptRide(RideRequest rideRequest) async {
+    final rideProvider = Provider.of<RideProvider>(context, listen: false);
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+    // Hide the overlay
+    RideRequestService().hideOverlay();
+    _isShowingRideRequestOverlay = false;
+
+    // Show loading dialog
+    _showLoadingDialog('Accepting ride...');
+
+    final driverId = authProvider.userId;
+    final accessToken = await authProvider.getCurrentToken();
+
+    if (driverId == null || accessToken == null) {
+      _hideLoadingDialog();
+      _showErrorMessage('Authentication error. Please login again.');
+      return;
+    }
+
+    final result = await rideProvider.acceptRideWithDetails(
+      driverId,
+      accessToken,
+    );
+
+    _hideLoadingDialog();
+
+    if (result['success'] == true) {
+      // Success is handled by the listener in _setupRideRequestListener
+      print('✅ Ride accepted: ${rideRequest.rideId}');
+    } else {
+      // Error is handled by the listener in _setupRideRequestListener
+      print('❌ Failed to accept ride: ${result['error']}');
+    }
+  }
+
+  // ✅ Handle decline ride action
+  Future<void> _handleDeclineRide(RideRequest rideRequest) async {
+    final rideProvider = Provider.of<RideProvider>(context, listen: false);
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+    // Hide the overlay
+    RideRequestService().hideOverlay();
+    _isShowingRideRequestOverlay = false;
+
+    final driverId = authProvider.userId;
+    final accessToken = await authProvider.getCurrentToken();
+
+    await rideProvider.cancelRide('Driver declined', driverId, accessToken);
+
+    _showInfoMessage('Ride request declined');
+  }
+
+  // ✅ Show loading dialog
+  void _showLoadingDialog(String message) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (context) => WillPopScope(
+            onWillPop: () async => false,
+            child: Center(
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const CircularProgressIndicator(),
+                      const SizedBox(height: 16),
+                      Text(message),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+    );
+  }
+
+  // Hide loading dialog
+  void _hideLoadingDialog() {
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
+  }
+
+  // Show success message
+  void _showSuccessMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle, color: Colors.white),
+            const SizedBox(width: 12),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  // Show error message with retry option
+  void _showErrorMessage(String message, {VoidCallback? onRetry}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.error_outline, color: Colors.white),
+            const SizedBox(width: 12),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 4),
+        action:
+            onRetry != null
+                ? SnackBarAction(
+                  label: 'Retry',
+                  textColor: Colors.white,
+                  onPressed: onRetry,
+                )
+                : null,
+      ),
+    );
+  }
+
+  // Show info message
+  void _showInfoMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), duration: const Duration(seconds: 2)),
+    );
+  }
+
+  //  Handle acceptance errors with appropriate UI feedback
+  void _handleAcceptanceError(String error) {
+    // Determine if retry is possible based on error
+    bool canRetry =
+        !error.contains('already been accepted') &&
+        !error.contains('Authentication');
+
+    _showErrorMessage(
+      error,
+      onRetry:
+          canRetry
+              ? () {
+                final rideProvider = Provider.of<RideProvider>(
+                  context,
+                  listen: false,
+                );
+                if (rideProvider.currentRideRequest != null) {
+                  _handleAcceptRide(rideProvider.currentRideRequest!);
+                }
+              }
+              : null,
+    );
+  }
+
   // Handle driver status changes
+  // Add connection state tracking
+  bool _isConnecting = false;
+
   void _handleDriverStatusChange() {
     final driverProvider = Provider.of<DriverProvider>(context, listen: false);
-    
-    if (driverProvider.isOnline) {
-      print('🟢 Driver went online - starting ride request listener');
-      _startListeningForRideRequests();
-    } else {
-      print('🔴 Driver went offline - stopping ride request listener');
+    final locationProvider = Provider.of<LocationProvider>(
+      context,
+      listen: false,
+    );
+
+    if (driverProvider.isOnline && !_isConnecting) {
+      print('🟢 Driver went online - starting WebSocket listener');
+      _isConnecting = true; // ✅ Prevent duplicate calls
+
+      _startListeningForRideRequests().then((_) {
+        _isConnecting = false;
+      });
+
+      // Subscribe to geographical channels if location is available
+      if (locationProvider.isLocationAvailable) {
+        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+        final driverId = authProvider.userId;
+        final currentLocation = locationProvider.currentLocation;
+
+        if (driverId != null && currentLocation != null) {
+          final rideProvider = Provider.of<RideProvider>(
+            context,
+            listen: false,
+          );
+          rideProvider.subscribeToLocation(
+            driverId,
+            currentLocation['latitude'],
+            currentLocation['longitude'],
+          );
+        }
+      }
+    } else if (!driverProvider.isOnline) {
+      print('🔴 Driver went offline - stopping WebSocket listener');
+      _isConnecting = false;
       _stopListeningForRideRequests();
     }
   }
@@ -114,27 +355,92 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     final accessToken = await authProvider.getCurrentToken();
 
     if (driverId != null && accessToken != null) {
-      print('🔊 Starting ride request listener for driver: $driverId');
+      print(
+        '🔊 Starting WebSocket ride request listener for driver: $driverId',
+      );
       await rideProvider.startListeningForRideRequests(driverId, accessToken);
     }
   }
 
   void _stopListeningForRideRequests() {
     final rideProvider = Provider.of<RideProvider>(context, listen: false);
-    print('🔇 Stopping ride request listener');
+    print('🔇 Stopping WebSocket ride request listener');
     rideProvider.stopListeningForRideRequests();
+  }
+
+  void _startLocationTracking() {
+    _locationSubscription = LocationService.watchLocation(
+      onLocationUpdate: (location) {
+        if (mounted) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            final locationProvider = Provider.of<LocationProvider>(
+              context,
+              listen: false,
+            );
+            final rideProvider = Provider.of<RideProvider>(
+              context,
+              listen: false,
+            );
+            final authProvider = Provider.of<AuthProvider>(
+              context,
+              listen: false,
+            );
+            final driverProvider = Provider.of<DriverProvider>(
+              context,
+              listen: false,
+            );
+
+            locationProvider.updateCurrentLocation(location);
+            _updateCurrentLocationMarker();
+
+            // Update location via WebSocket if online and connected
+            if (driverProvider.isOnline && rideProvider.isConnected) {
+              final driverId = authProvider.userId;
+              if (driverId != null) {
+                rideProvider.updateDriverLocation(
+                  driverId,
+                  location['latitude'],
+                  location['longitude'],
+                  true, // isAvailable
+                );
+              }
+            }
+          });
+        }
+      },
+      onError: (error) {
+        if (mounted) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            SnackbarHelper.showErrorSnackBar(context, error);
+          });
+        }
+      },
+    );
   }
 
   @override
   void dispose() {
     // Remove the listener when disposing
     final driverProvider = Provider.of<DriverProvider>(context, listen: false);
-    driverProvider.removeListener(_handleDriverStatusChange);
-    
+    final rideProvider = Provider.of<RideProvider>(context, listen: false);
+
+    // Remove listeners if they exist
+    try {
+      driverProvider.removeListener(_handleDriverStatusChange);
+      rideProvider.removeListener(_setupRideRequestListener);
+    } catch (e) {
+      print('Note: Driver provider listener was not attached');
+    }
+
     _locationSubscription?.cancel();
     _mapController?.dispose();
     LocationService.stopWatchingLocation();
     _stopListeningForRideRequests();
+
+    if (_isShowingRideRequestOverlay) {
+      RideRequestService().hideOverlay();
+    }
+
     super.dispose();
   }
 
@@ -158,29 +464,29 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     }
   }
 
-  void _startLocationTracking() {
-    _locationSubscription = LocationService.watchLocation(
-      onLocationUpdate: (location) {
-        if (mounted) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            final locationProvider = Provider.of<LocationProvider>(
-              context,
-              listen: false,
-            );
-            locationProvider.updateCurrentLocation(location);
-            _updateCurrentLocationMarker();
-          });
-        }
-      },
-      onError: (error) {
-        if (mounted) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            SnackbarHelper.showErrorSnackBar(context, error);
-          });
-        }
-      },
-    );
-  }
+  // void _startLocationTracking() {
+  //   _locationSubscription = LocationService.watchLocation(
+  //     onLocationUpdate: (location) {
+  //       if (mounted) {
+  //         WidgetsBinding.instance.addPostFrameCallback((_) {
+  //           final locationProvider = Provider.of<LocationProvider>(
+  //             context,
+  //             listen: false,
+  //           );
+  //           locationProvider.updateCurrentLocation(location);
+  //           _updateCurrentLocationMarker();
+  //         });
+  //       }
+  //     },
+  //     onError: (error) {
+  //       if (mounted) {
+  //         WidgetsBinding.instance.addPostFrameCallback((_) {
+  //           SnackbarHelper.showErrorSnackBar(context, error);
+  //         });
+  //       }
+  //     },
+  //   );
+  // }
 
   void _updateCurrentLocationMarker() {
     final locationProvider = Provider.of<LocationProvider>(
@@ -657,7 +963,12 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       return;
     }
     final rideRequest = RideRequestService().generateDummyRideRequest();
-    RideRequestService().showRideRequest(context, rideRequest);
+    RideRequestService().showRideRequest(
+      context,
+      rideRequest,
+      () => _handleAcceptRide(rideRequest),
+      () => _handleDeclineRide(rideRequest),
+    );
   }
 
   @override

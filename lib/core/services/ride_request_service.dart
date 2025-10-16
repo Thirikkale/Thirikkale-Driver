@@ -26,7 +26,12 @@ class RideRequestService {
   }
 
   // Show ride request overlay
-  void showRideRequest(BuildContext context, RideRequest rideRequest) {
+  void showRideRequest(
+    BuildContext context,
+    RideRequest rideRequest,
+    VoidCallback onAccept,
+    VoidCallback onDecline,
+  ) {
     _removeOverlay();
     _playNotificationSound();
     _vibrateDevice();
@@ -39,8 +44,8 @@ class RideRequestService {
               child: Center(
                 child: RideRequestCard(
                   rideRequest: rideRequest,
-                  onAccept: () => _handleAccept(context, rideRequest),
-                  onDecline: () => _handleDecline(context, rideRequest),
+                  onAccept: onAccept,
+                  onDecline: onDecline,
                 ),
               ),
             ),
@@ -72,7 +77,9 @@ class RideRequestService {
       _soundTimer = Timer.periodic(const Duration(seconds: 3), (timer) async {
         if (_overlayEntry != null) {
           try {
-            await _audioPlayer.play(AssetSource('sounds/alert_sound_final.mp3'));
+            await _audioPlayer.play(
+              AssetSource('sounds/alert_sound_final.mp3'),
+            );
           } catch (e) {
             print('Error repeating notification sound: $e');
           }
@@ -116,13 +123,13 @@ class RideRequestService {
   // Handle accept action
   void _handleAccept(BuildContext context, RideRequest rideRequest) async {
     _removeOverlay();
-    
+
     final rideProvider = Provider.of<RideProvider>(context, listen: false);
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    
+
     final driverId = authProvider.userId;
     final accessToken = await authProvider.getCurrentToken();
-    
+
     if (driverId != null && accessToken != null) {
       final success = await rideProvider.acceptRide(driverId, accessToken);
       if (success) {
@@ -134,19 +141,19 @@ class RideRequestService {
     }
   }
 
-  // Handle decline action
-  void _handleDecline(BuildContext context, RideRequest rideRequest) async {
-    _removeOverlay();
-    
-    final rideProvider = Provider.of<RideProvider>(context, listen: false);
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    
-    final driverId = authProvider.userId;
-    final accessToken = await authProvider.getCurrentToken();
-    
-    await rideProvider.declineRide('Driver declined', driverId, accessToken);
-    print('❌ Ride request declined: ${rideRequest.rideId}');
-  }
+  // // Handle decline action
+  // void _handleDecline(BuildContext context, RideRequest rideRequest) async {
+  //   _removeOverlay();
+
+  //   final rideProvider = Provider.of<RideProvider>(context, listen: false);
+  //   final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+  //   final driverId = authProvider.userId;
+  //   final accessToken = await authProvider.getCurrentToken();
+
+  //   await rideProvider.declineRide('Driver declined', driverId, accessToken);
+  //   print('❌ Ride request declined: ${rideRequest.rideId}');
+  // }
 
   // Generate dummy ride request for testing
   RideRequest generateDummyRideRequest() {
@@ -248,6 +255,10 @@ class RideRequestService {
   void dispose() {
     _audioPlayer.dispose();
     _rideRequestSubscription?.cancel();
+    _removeOverlay();
+  }
+
+  void hideOverlay() {
     _removeOverlay();
   }
 }

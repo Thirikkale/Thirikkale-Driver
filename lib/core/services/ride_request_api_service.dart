@@ -74,7 +74,7 @@ class RideRequestApiService {
       print('🔍 Fetching ride requests from: $url');
 
       final headers = ApiConfig.getJWTHeaders(accessToken);
-      headers['User-ID'] = driverId; 
+      headers['User-ID'] = driverId;
 
       final response = await http
           .get(Uri.parse(url), headers: headers)
@@ -95,7 +95,9 @@ class RideRequestApiService {
         throw Exception('Authentication failed');
       } else {
         print('📄 Ride requests response body: ${response.body}');
-        throw Exception('Failed to fetch ride requests: ${response.statusCode}');
+        throw Exception(
+          'Failed to fetch ride requests: ${response.statusCode}',
+        );
       }
     } catch (e) {
       print('❌ Error in _fetchPendingRideRequests: $e');
@@ -112,34 +114,58 @@ class RideRequestApiService {
     try {
       print('✅ Accepting ride request: $rideId for driver: $driverId');
 
-      final url = '${ApiConfig.rideServiceBaseUrl}/rides/$rideId/accept';
+      final url = ApiConfig.acceptRide(rideId);
 
       final headers = ApiConfig.getJWTHeaders(accessToken);
       headers['User-ID'] = driverId;
 
+      final body = {
+        'driverId': driverId,
+        'acceptedAt': DateTime.now().toIso8601String(),
+      };
+
       final response = await http
-          .post(
-            Uri.parse(url),
-            headers: ApiConfig.getJWTHeaders(accessToken),
-            body: jsonEncode({'driverId': driverId}),
-          )
-          .timeout(const Duration(seconds: 10));
+          .post(Uri.parse(url), headers: headers, body: jsonEncode(body))
+          .timeout(const Duration(seconds: 15));
 
       print('📨 Accept ride response status: ${response.statusCode}');
       print('📄 Accept ride response body: ${response.body}');
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
-        return {'success': true, 'data': jsonDecode(response.body)};
+        final responseData = jsonDecode(response.body);
+        return {
+          'success': true,
+          'data': responseData,
+          'message': 'Ride accepted successfully',
+        };
+      } else if (response.statusCode == 409) {
+        // Ride already accepted by another driver
+        return {
+          'success': false,
+          'error': 'This ride has already been accepted by another driver',
+          'code': 'RIDE_ALREADY_ACCEPTED',
+        };
+      } else if (response.statusCode == 404) {
+        return {
+          'success': false,
+          'error': 'Ride not found or no longer available',
+          'code': 'RIDE_NOT_FOUND',
+        };
       } else {
         final errorData = jsonDecode(response.body);
         return {
           'success': false,
           'error': errorData['message'] ?? 'Failed to accept ride',
+          'code': 'UNKNOWN_ERROR',
         };
       }
     } catch (e) {
       print('❌ Error accepting ride request: $e');
-      return {'success': false, 'error': 'Network error: $e'};
+      return {
+        'success': false,
+        'error': 'Network error. Please check your connection.',
+        'code': 'NETWORK_ERROR',
+      };
     }
   }
 
@@ -156,7 +182,7 @@ class RideRequestApiService {
       final url = '${ApiConfig.rideServiceBaseUrl}/rides/$rideId/cancel';
 
       final headers = ApiConfig.getJWTHeaders(accessToken);
-      headers['User-ID'] = driverId; 
+      headers['User-ID'] = driverId;
 
       final body = {
         'driverId': driverId,

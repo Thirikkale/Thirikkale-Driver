@@ -334,7 +334,7 @@ class _RiderDetailsBottomSheetState extends State<RiderDetailsBottomSheet> {
                       final driverId = authProvider.userId;
                       final accessToken = await authProvider.getCurrentToken();
 
-                      await rideProvider.declineRide(
+                      await rideProvider.cancelRide(
                         _selectedReason,
                         driverId,
                         accessToken,
