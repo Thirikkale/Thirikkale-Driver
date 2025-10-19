@@ -15,6 +15,8 @@ class WebSocketService {
   bool _isConnected = false;
   String? _accessToken;
   bool _isConnecting = false;
+  int _reconnectAttempts = 0;
+  static const int _maxReconnectAttempts = 5;
 
   // Stream controllers for different events
   final StreamController<RideRequest> _rideRequestController =
@@ -46,53 +48,77 @@ class WebSocketService {
     _isConnecting = true;
     await disconnect();
     _currentDriverId = driverId;
+    _accessToken = accessToken;
 
     print('🔗 Connecting WebSocket for driver: $driverId');
 
-    _accessToken = accessToken;
+    // ✅ Keep HTTP protocol for SockJS (library converts to ws:// internally)
+    final wsUrl = '${ApiConfig.webSocketUrl}/ride-service/ws/ride-tracking';
 
-    final wsUrl = 'http://10.249.61.103:8082/ride-service/ws/ride-tracking';
-
-    final wsUrlWithAuth = '$wsUrl?access_token=$accessToken';
+    print('🌐 WebSocket URL: $wsUrl');
 
     try {
       _stompClient = StompClient(
         config: StompConfig(
-          url: wsUrlWithAuth,
+          url: wsUrl, // ✅ Use HTTP URL with SockJS
+          
           onConnect: (StompFrame frame) {
             print('✅ WebSocket connected successfully');
             _isConnected = true;
             _isConnecting = false;
+            _reconnectAttempts = 0;
             _connectionController.add(true);
             _subscribeToChannels(driverId);
           },
+          
           onWebSocketError: (dynamic error) {
             print('❌ WebSocket error: $error');
             _isConnected = false;
             _isConnecting = false;
             _connectionController.add(false);
 
-            // ✅ Add retry logic
-            _scheduleReconnect(driverId, accessToken);
+            if (_reconnectAttempts < _maxReconnectAttempts) {
+              _scheduleReconnect(driverId, accessToken);
+            } else {
+              print('❌ Max reconnection attempts reached');
+            }
           },
+          
           onStompError: (StompFrame frame) {
             print('❌ STOMP error: ${frame.body}');
             _isConnected = false;
             _isConnecting = false;
             _connectionController.add(false);
           },
+          
           onDisconnect: (StompFrame frame) {
             print('🔌 WebSocket disconnected');
             _isConnected = false;
             _isConnecting = false;
             _connectionController.add(false);
           },
+          
+          // ✅ Authentication headers
           webSocketConnectHeaders: {
             'Authorization': 'Bearer $accessToken',
-            'User-ID': driverId,
           },
+          
+          stompConnectHeaders: {
+            'Authorization': 'Bearer $accessToken',
+            'driver-id': driverId,
+          },
+          
+          // ✅ MUST use SockJS for Spring Boot WebSocket
           useSockJS: true,
-          connectionTimeout: const Duration(seconds: 10),
+          
+          // Connection settings
+          connectionTimeout: const Duration(seconds: 30),
+          heartbeatIncoming: const Duration(seconds: 10),
+          heartbeatOutgoing: const Duration(seconds: 10),
+          
+          beforeConnect: () async {
+            print('🔄 Preparing to connect WebSocket...');
+          },
         ),
       );
 
@@ -102,195 +128,248 @@ class WebSocketService {
       _isConnected = false;
       _isConnecting = false;
       _connectionController.add(false);
+      
+      if (_reconnectAttempts < _maxReconnectAttempts) {
+        _scheduleReconnect(driverId, accessToken);
+      }
     }
   }
 
   void _subscribeToChannels(String driverId) {
-    if (_stompClient == null || !_isConnected) return;
+    if (_stompClient == null || !_isConnected) {
+      print('⚠️ Cannot subscribe - not connected');
+      return;
+    }
 
-    // Subscribe to ride request for this driver
-    _stompClient!.subscribe(
-      destination: '/user/$driverId/queue/ride-requests',
-      callback: (StompFrame frame) {
-        if (frame.body != null) {
-          try {
-            final data = jsonDecode(frame.body!);
-            final rideRequest = RideRequest.fromBackendJson(data);
-            print('📨 Received ride request: ${rideRequest.rideId}');
-            _rideRequestController.add(rideRequest);
-          } catch (e) {
-            print('❌ Error parsing ride request: $e');
+    try {
+      // Subscribe to ride requests for this driver
+      _stompClient!.subscribe(
+        destination: '/user/$driverId/queue/ride-requests',
+        callback: (StompFrame frame) {
+          if (frame.body != null) {
+            try {
+              final data = jsonDecode(frame.body!);
+              final rideRequest = RideRequest.fromBackendJson(data);
+              print('📨 Received ride request: ${rideRequest.rideId}');
+              _rideRequestController.add(rideRequest);
+            } catch (e) {
+              print('❌ Error parsing ride request: $e');
+            }
           }
-        }
-      },
-    );
+        },
+      );
 
-    // Subscribe to ride updates for this driver
-    _stompClient!.subscribe(
-      destination: '/user/$driverId/queue/ride-updates',
-      callback: (StompFrame frame) {
-        if (frame.body != null) {
-          try {
-            final data = jsonDecode(frame.body!);
-            print('📨 Received ride update: $data');
-            _rideUpdateController.add(data);
-          } catch (e) {
-            print('❌ Error parsing ride update: $e');
+      // Subscribe to ride updates
+      _stompClient!.subscribe(
+        destination: '/user/$driverId/queue/ride-updates',
+        callback: (StompFrame frame) {
+          if (frame.body != null) {
+            try {
+              final data = jsonDecode(frame.body!);
+              print('📨 Received ride update: $data');
+              _rideUpdateController.add(data);
+            } catch (e) {
+              print('❌ Error parsing ride update: $e');
+            }
           }
-        }
-      },
-    );
+        },
+      );
 
-    // Subscribe to pub/sub ride requests
-    _stompClient!.subscribe(
-      destination: '/user/$driverId/queue/pubsub-ride-requests',
-      callback: (StompFrame frame) {
-        if (frame.body != null) {
-          try {
-            final data = jsonDecode(frame.body!);
-            final rideRequest = RideRequest.fromBackendJson(data);
-            print('📨 Received pub/sub ride request: ${rideRequest.rideId}');
-            _rideRequestController.add(rideRequest);
-          } catch (e) {
-            print('❌ Error parsing pub/sub ride request: $e');
+      // Subscribe to pub/sub ride requests
+      _stompClient!.subscribe(
+        destination: '/user/$driverId/queue/pubsub-ride-requests',
+        callback: (StompFrame frame) {
+          if (frame.body != null) {
+            try {
+              final data = jsonDecode(frame.body!);
+              final rideRequest = RideRequest.fromBackendJson(data);
+              print('📨 Received pub/sub ride request: ${rideRequest.rideId}');
+              _rideRequestController.add(rideRequest);
+            } catch (e) {
+              print('❌ Error parsing pub/sub ride request: $e');
+            }
           }
-        }
-      },
-    );
+        },
+      );
 
-    print('🔔 Subscribed to WebSocket channels for driver: $driverId');
+      print('🔔 Subscribed to WebSocket channels for driver: $driverId');
+    } catch (e) {
+      print('❌ Error subscribing to channels: $e');
+    }
   }
 
-  // Subscribe driver to geographical channels
   void subscribeToGeographicalChannels(
     String driverId,
     double latitude,
     double longitude,
   ) {
-    if (_stompClient == null || !_isConnected) return;
+    if (_stompClient == null || !_isConnected) {
+      print('⚠️ Cannot subscribe to geo channels - not connected');
+      return;
+    }
 
-    _stompClient!.send(
-      destination: '/app/pubsub/driver/subscribe',
-      body: jsonEncode({
-        'driverId': driverId,
-        'latitude': latitude,
-        'longitude': longitude,
-      }),
-    );
+    try {
+      _stompClient!.send(
+        destination: '/app/pubsub/driver/subscribe',
+        body: jsonEncode({
+          'driverId': driverId,
+          'latitude': latitude,
+          'longitude': longitude,
+        }),
+      );
 
-    print(
-      '📍 Subscribed driver to geographical channels at: $latitude, $longitude',
-    );
+      print('📍 Subscribed to geo channels at: $latitude, $longitude');
+    } catch (e) {
+      print('❌ Error subscribing to geo channels: $e');
+    }
   }
 
-  // Update driver location
   void updateDriverLocation(
     String driverId,
     double latitude,
     double longitude,
     bool isAvailable,
   ) {
-    if (_stompClient == null || !_isConnected) return;
+    if (_stompClient == null || !_isConnected) {
+      print('⚠️ Cannot update location - not connected');
+      return;
+    }
 
-    _stompClient!.send(
-      destination: '/app/pubsub/driver/location',
-      body: jsonEncode({
-        'driverId': driverId,
-        'latitude': latitude,
-        'longitude': longitude,
-        'isAvailable': isAvailable,
-      }),
-    );
+    try {
+      _stompClient!.send(
+        destination: '/app/pubsub/driver/location',
+        body: jsonEncode({
+          'driverId': driverId,
+          'latitude': latitude,
+          'longitude': longitude,
+          'isAvailable': isAvailable,
+        }),
+      );
+    } catch (e) {
+      print('❌ Error updating location: $e');
+    }
   }
 
-  // Accept ride request
   void acceptRideRequest(String requestId, String driverId, String riderId) {
-    if (_stompClient == null || !_isConnected) return;
+    if (_stompClient == null || !_isConnected) {
+      print('⚠️ Cannot accept ride - not connected');
+      return;
+    }
 
-    _stompClient!.send(
-      destination: '/app/pubsub/ride/accept',
-      body: jsonEncode({
-        'requestId': requestId,
-        'driverId': driverId,
-        'riderId': riderId,
-      }),
-    );
+    try {
+      _stompClient!.send(
+        destination: '/app/pubsub/ride/accept',
+        body: jsonEncode({
+          'requestId': requestId,
+          'driverId': driverId,
+          'riderId': riderId,
+        }),
+      );
 
-    print('✅ Sent ride acceptance for request: $requestId');
+      print('✅ Sent ride acceptance for request: $requestId');
+    } catch (e) {
+      print('❌ Error accepting ride: $e');
+    }
   }
 
-  // Decline ride request
   void declineRideRequest(String requestId, String driverId, String reason) {
-    if (_stompClient == null || !_isConnected) return;
+    if (_stompClient == null || !_isConnected) {
+      print('⚠️ Cannot decline ride - not connected');
+      return;
+    }
 
-    _stompClient!.send(
-      destination: '/app/pubsub/ride/reject',
-      body: jsonEncode({
-        'requestId': requestId,
-        'driverId': driverId,
-        'reason': reason,
-      }),
-    );
+    try {
+      _stompClient!.send(
+        destination: '/app/pubsub/ride/reject',
+        body: jsonEncode({
+          'requestId': requestId,
+          'driverId': driverId,
+          'reason': reason,
+        }),
+      );
 
-    print('❌ Sent ride rejection for request: $requestId');
+      print('❌ Sent ride rejection for request: $requestId');
+    } catch (e) {
+      print('❌ Error declining ride: $e');
+    }
   }
 
-  // Send heartbeat
   void sendHeartbeat(String driverId) {
     if (_stompClient == null || !_isConnected) return;
 
-    _stompClient!.send(
-      destination: '/app/driver/heartbeat',
-      body: jsonEncode({
-        'driverId': driverId,
-        'timestamp': DateTime.now().millisecondsSinceEpoch,
-      }),
-    );
+    try {
+      _stompClient!.send(
+        destination: '/app/driver/heartbeat',
+        body: jsonEncode({
+          'driverId': driverId,
+          'timestamp': DateTime.now().millisecondsSinceEpoch,
+        }),
+      );
+    } catch (e) {
+      print('❌ Error sending heartbeat: $e');
+    }
   }
 
-  // Unsubscribe from geographical channels
   void unsubscribeFromGeographicalChannels(String driverId) {
     if (_stompClient == null || !_isConnected) return;
 
-    _stompClient!.send(
-      destination: '/app/pubsub/driver/unsubscribe',
-      body: jsonEncode({'driverId': driverId}),
-    );
+    try {
+      _stompClient!.send(
+        destination: '/app/pubsub/driver/unsubscribe',
+        body: jsonEncode({'driverId': driverId}),
+      );
 
-    print('🔇 Unsubscribed driver from geographical channels');
+      print('🔇 Unsubscribed from geo channels');
+    } catch (e) {
+      print('❌ Error unsubscribing: $e');
+    }
   }
 
-  //  Add retry mechanism
   Timer? _reconnectTimer;
 
   void _scheduleReconnect(String driverId, String accessToken) {
     _reconnectTimer?.cancel();
-    _reconnectTimer = Timer(const Duration(seconds: 5), () {
-      if (!_isConnected) {
-        print('🔄 Attempting to reconnect WebSocket...');
+    
+    _reconnectAttempts++;
+    final delay = Duration(seconds: 5 * _reconnectAttempts);
+    
+    print('🔄 Scheduling reconnection attempt $_reconnectAttempts in ${delay.inSeconds}s...');
+    
+    _reconnectTimer = Timer(delay, () {
+      if (!_isConnected && _reconnectAttempts <= _maxReconnectAttempts) {
+        print('🔄 Attempting to reconnect WebSocket (attempt $_reconnectAttempts/$_maxReconnectAttempts)...');
         connect(driverId, accessToken);
       }
     });
   }
 
+  void resetReconnectionAttempts() {
+    _reconnectAttempts = 0;
+  }
+
   Future<void> disconnect() async {
     print('🔌 Disconnecting WebSocket...');
 
-    // ✅ Cancel reconnection attempts
     _reconnectTimer?.cancel();
     _isConnecting = false;
+    _reconnectAttempts = 0;
 
     if (_currentDriverId != null) {
       unsubscribeFromGeographicalChannels(_currentDriverId!);
     }
 
     if (_stompClient != null) {
-      _stompClient!.deactivate();
+      try {
+        _stompClient!.deactivate();
+      } catch (e) {
+        print('⚠️ Error during deactivation: $e');
+      }
       _stompClient = null;
     }
 
     _isConnected = false;
     _currentDriverId = null;
+    _accessToken = null;
     _connectionController.add(false);
     print('🔌 WebSocket disconnected completely');
   }

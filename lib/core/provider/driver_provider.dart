@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:thirikkale_driver/core/services/availability_service.dart';
 
 class DriverProvider extends ChangeNotifier {
-  final DriverAvailabilityService _availabilityService =
-      DriverAvailabilityService();
+  final AvailabilityService _availabilityService =
+      AvailabilityService();
 
   bool _isOnline = false;
   double _dailyEarnings = 0.0;
@@ -34,7 +34,6 @@ class DriverProvider extends ChangeNotifier {
     required double latitude,
     required double longitude,
     required bool isAvailable,
-    required String vehicleType,
     required String accessToken,
   }) async {
     _isSettingAvailability = true;
@@ -47,7 +46,6 @@ class DriverProvider extends ChangeNotifier {
         latitude: latitude,
         longitude: longitude,
         isAvailable: isAvailable,
-        vehicleType: vehicleType,
         accessToken: accessToken,
       );
 
@@ -84,7 +82,6 @@ class DriverProvider extends ChangeNotifier {
     required String driverId,
     required double latitude,
     required double longitude,
-    required String vehicleType,
     required String accessToken,
   }) async {
     return await setDriverAvailability(
@@ -92,7 +89,6 @@ class DriverProvider extends ChangeNotifier {
       latitude: latitude,
       longitude: longitude,
       isAvailable: !_isOnline,
-      vehicleType: vehicleType,
       accessToken: accessToken,
     );
   }
@@ -141,3 +137,4 @@ class DriverProvider extends ChangeNotifier {
     notifyListeners();
   }
 }
+

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:thirikkale_driver/core/utils/app_dimensions.dart';
 import 'package:thirikkale_driver/core/utils/app_styles.dart';
+import 'package:thirikkale_driver/core/utils/snackbar_helper.dart';
 import 'package:thirikkale_driver/features/authentication/models/document_item_model.dart';
 import 'package:thirikkale_driver/features/authentication/screens/upload_screens/driving_license_screen.dart';
 import 'package:thirikkale_driver/features/authentication/screens/upload_screens/profile_picture_screen.dart';
@@ -13,6 +14,7 @@ class DocumentListItem extends StatelessWidget {
   final VoidCallback? onTap; // Made optional with ?
   final Function(String documentTitle) onDocumentCompleted;
   final VoidCallback? onRefreshStatus;
+  final String? primaryVehicleId;
 
   const DocumentListItem({
     super.key,
@@ -20,6 +22,7 @@ class DocumentListItem extends StatelessWidget {
     this.onTap, // Removed required keyword
     required this.onDocumentCompleted,
     this.onRefreshStatus,
+    this.primaryVehicleId,
   });
 
   String _getCompletionMessage(String documentTitle) {
@@ -41,6 +44,20 @@ class DocumentListItem extends StatelessWidget {
   ) async {
     Widget? screen;
 
+    // Check if vehicleId is required but missing
+    final isVehicleDoc = [
+      'Revenue License',
+      'Vehicle Insurance',
+      'Vehicle Registration',
+    ].contains(documentTitle);
+    if (isVehicleDoc && primaryVehicleId == null) {
+      SnackbarHelper.showErrorSnackBar(
+        context,
+        'Vehicle ID not available. Please try again.',
+      );
+      return;
+    }
+
     switch (documentTitle) {
       case 'Profile Picture':
         screen = ProfilePictureScreen(
@@ -53,13 +70,14 @@ class DocumentListItem extends StatelessWidget {
         screen = const DrivingLicenseScreen();
         break;
       case 'Revenue License':
-        screen = const RevenueLicenseScreen();
+        // Pass the vehicleId to the specific upload screens
+        screen = RevenueLicenseScreen(vehicleId: primaryVehicleId!);
         break;
       case 'Vehicle Insurance':
-        screen = const VehicleInsuranceScreen();
+        screen = VehicleInsuranceScreen(vehicleId: primaryVehicleId!);
         break;
       case 'Vehicle Registration':
-        screen = const VehicleRegistrationScreen();
+        screen = VehicleRegistrationScreen(vehicleId: primaryVehicleId!);
         break;
     }
 

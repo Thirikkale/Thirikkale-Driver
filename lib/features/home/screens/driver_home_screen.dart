@@ -69,19 +69,28 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeLocation();
-
-      // Fetches latest profile data
-      Provider.of<AuthProvider>(context, listen: false).fetchDriverProfile();
-      _setupRideRequestListener();
+      _connectWebSocket(); // ✅ Connect WebSocket once on screen load
+      _setupListeners();
     });
   }
 
-  void _setupRideRequestListener() {
+  // ✅ Connect WebSocket once and keep it alive
+  void _connectWebSocket() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final rideProvider = Provider.of<RideProvider>(context, listen: false);
-    final driverProvider = Provider.of<DriverProvider>(context, listen: false);
+    final driverId = authProvider.userId;
+    final accessToken = await authProvider.getCurrentToken();
 
-    // Add listener for driver status changes
-    driverProvider.addListener(_handleDriverStatusChange);
+    if (driverId != null && accessToken != null) {
+      print(
+        '🔊 Starting persistent WebSocket connection for driver: $driverId',
+      );
+      await rideProvider.startListeningForRideRequests(driverId, accessToken);
+    }
+  }
+
+  void _setupListeners() {
+    final rideProvider = Provider.of<RideProvider>(context, listen: false);
 
     // Enhanced ride request listener with proper state handling
     rideProvider.addListener(() {
@@ -279,7 +288,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     );
   }
 
-  //  Handle acceptance errors with appropriate UI feedback
+  //  Handle acceptance errors with appropriate UI feedback
   void _handleAcceptanceError(String error) {
     // Determine if retry is possible based on error
     bool canRetry =
@@ -301,71 +310,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
               }
               : null,
     );
-  }
-
-  // Handle driver status changes
-  // Add connection state tracking
-  bool _isConnecting = false;
-
-  void _handleDriverStatusChange() {
-    final driverProvider = Provider.of<DriverProvider>(context, listen: false);
-    final locationProvider = Provider.of<LocationProvider>(
-      context,
-      listen: false,
-    );
-
-    if (driverProvider.isOnline && !_isConnecting) {
-      print('🟢 Driver went online - starting WebSocket listener');
-      _isConnecting = true; // ✅ Prevent duplicate calls
-
-      _startListeningForRideRequests().then((_) {
-        _isConnecting = false;
-      });
-
-      // Subscribe to geographical channels if location is available
-      if (locationProvider.isLocationAvailable) {
-        final authProvider = Provider.of<AuthProvider>(context, listen: false);
-        final driverId = authProvider.userId;
-        final currentLocation = locationProvider.currentLocation;
-
-        if (driverId != null && currentLocation != null) {
-          final rideProvider = Provider.of<RideProvider>(
-            context,
-            listen: false,
-          );
-          rideProvider.subscribeToLocation(
-            driverId,
-            currentLocation['latitude'],
-            currentLocation['longitude'],
-          );
-        }
-      }
-    } else if (!driverProvider.isOnline) {
-      print('🔴 Driver went offline - stopping WebSocket listener');
-      _isConnecting = false;
-      _stopListeningForRideRequests();
-    }
-  }
-
-  Future<void> _startListeningForRideRequests() async {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final rideProvider = Provider.of<RideProvider>(context, listen: false);
-
-    final driverId = authProvider.userId;
-    final accessToken = await authProvider.getCurrentToken();
-
-    if (driverId != null && accessToken != null) {
-      print(
-        '🔊 Starting WebSocket ride request listener for driver: $driverId',
-      );
-      await rideProvider.startListeningForRideRequests(driverId, accessToken);
-    }
-  }
-
-  void _stopListeningForRideRequests() {
-    final rideProvider = Provider.of<RideProvider>(context, listen: false);
-    print('🔇 Stopping WebSocket ride request listener');
-    rideProvider.stopListeningForRideRequests();
   }
 
   void _startLocationTracking() {
@@ -421,21 +365,20 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   @override
   void dispose() {
     // Remove the listener when disposing
-    final driverProvider = Provider.of<DriverProvider>(context, listen: false);
     final rideProvider = Provider.of<RideProvider>(context, listen: false);
 
     // Remove listeners if they exist
     try {
-      driverProvider.removeListener(_handleDriverStatusChange);
-      rideProvider.removeListener(_setupRideRequestListener);
+      rideProvider.removeListener(_setupListeners);
     } catch (e) {
-      print('Note: Driver provider listener was not attached');
+      print('Note: Ride provider listener was not attached');
     }
 
     _locationSubscription?.cancel();
     _mapController?.dispose();
     LocationService.stopWatchingLocation();
-    _stopListeningForRideRequests();
+    rideProvider
+        .stopListeningForRideRequests(); // ✅ Disconnect WebSocket on dispose
 
     if (_isShowingRideRequestOverlay) {
       RideRequestService().hideOverlay();
@@ -463,30 +406,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       _startLocationTracking();
     }
   }
-
-  // void _startLocationTracking() {
-  //   _locationSubscription = LocationService.watchLocation(
-  //     onLocationUpdate: (location) {
-  //       if (mounted) {
-  //         WidgetsBinding.instance.addPostFrameCallback((_) {
-  //           final locationProvider = Provider.of<LocationProvider>(
-  //             context,
-  //             listen: false,
-  //           );
-  //           locationProvider.updateCurrentLocation(location);
-  //           _updateCurrentLocationMarker();
-  //         });
-  //       }
-  //     },
-  //     onError: (error) {
-  //       if (mounted) {
-  //         WidgetsBinding.instance.addPostFrameCallback((_) {
-  //           SnackbarHelper.showErrorSnackBar(context, error);
-  //         });
-  //       }
-  //     },
-  //   );
-  // }
 
   void _updateCurrentLocationMarker() {
     final locationProvider = Provider.of<LocationProvider>(
@@ -692,7 +611,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     // Get required data
     final driverId = authProvider.userId;
     final accessToken = await authProvider.getCurrentToken();
-    final vehicleType = authProvider.selectedVehicleType ?? 'TUK';
 
     if (driverId == null || accessToken == null) {
       SnackbarHelper.showErrorSnackBar(
@@ -703,22 +621,9 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     }
 
     // Check if location is available
-    print('🔍 Checking location availability...');
-    print('📍 Current location: ${locationProvider.currentLocation}');
-    print('📍 Current position: ${locationProvider.currentPosition}');
-    print('❌ Location error: ${locationProvider.locationError}');
-
     if (!locationProvider.isLocationAvailable) {
-      print('❌ Location not available, trying to get location...');
-
-      // Try to get location
       await locationProvider.getCurrentLocation();
-
-      // Wait a bit for the location to be updated
-      await Future.delayed(const Duration(milliseconds: 500));
-
       if (!locationProvider.isLocationAvailable) {
-        print('❌ Still no location after retry');
         _showLocationDialog(locationProvider);
         return;
       }
@@ -758,7 +663,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         driverId: driverId,
         latitude: currentPosition.latitude,
         longitude: currentPosition.longitude,
-        vehicleType: vehicleType,
         accessToken: accessToken,
       );
 
@@ -816,7 +720,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                 const SizedBox(height: 8),
                 const Text('• Location services are enabled on your device'),
                 const Text('• Location permission is granted to this app'),
-                const Text('• GPS is turned on'),
                 const SizedBox(height: 8),
                 Text(
                   'Current status: ${locationProvider.locationError ?? "Unknown error"}',
@@ -998,34 +901,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                       currentLocationMap['longitude'],
                     )
                     : null;
-
-            // --- FIX: Logic to draw/clear routes only once per ride state change ---
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              // Condition to DRAW routes:
-              // A ride is accepted AND its ID is different from the one we've already drawn.
-              if (rideProvider.isRideAccepted &&
-                  _currentlyDisplayedRideId !=
-                      rideProvider.currentRideRequest?.rideId) {
-                _createRideRoutes();
-                // Mark this ride's ID as the one being displayed.
-                _currentlyDisplayedRideId =
-                    rideProvider.currentRideRequest?.rideId;
-              }
-              // Condition to CLEAR routes:
-              // There is no accepted ride, but we still have a stored ride ID (meaning a ride just ended).
-              else if (!rideProvider.isRideAccepted &&
-                  _currentlyDisplayedRideId != null) {
-                setState(() {
-                  _polylines.clear();
-                  // Keep the current location marker, remove others.
-                  _markers.removeWhere(
-                    (m) => m.markerId.value != 'current_location',
-                  );
-                });
-                // Reset the stored ride ID.
-                _currentlyDisplayedRideId = null;
-              }
-            });
 
             return Stack(
               children: [
