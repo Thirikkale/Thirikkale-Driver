@@ -47,13 +47,13 @@ class RideRequest {
   // Create from backend JSON response
   factory RideRequest.fromBackendJson(Map<String, dynamic> json) {
     return RideRequest(
-      rideId: json['id'] ?? '',
-      riderId: json['userId'] ?? '',
+      rideId: json['requestId'] ?? '', 
+      riderId: json['riderId'] ?? '', 
       riderName: json['riderName'] ?? 'Unknown Rider',
       riderPhone: json['riderPhone'] ?? '+94000000000',
       riderRating: (json['riderRating'] ?? 4.5).toDouble(),
-      pickupAddress: json['pickupLocation'] ?? '',
-      destinationAddress: json['dropoffLocation'] ?? '',
+      pickupAddress: json['pickupAddress'] ?? '', 
+      destinationAddress: json['dropoffAddress'] ?? '', 
       pickupLat: (json['pickupLatitude'] ?? 0.0).toDouble(),
       pickupLng: (json['pickupLongitude'] ?? 0.0).toDouble(),
       destinationLat: (json['dropoffLatitude'] ?? 0.0).toDouble(),

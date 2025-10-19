@@ -92,6 +92,23 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   void _setupListeners() {
     final rideProvider = Provider.of<RideProvider>(context, listen: false);
 
+    // ✅ Add explicit stream listener
+    rideProvider.rideRequestStream.listen(
+      (rideRequest) {
+        print(
+          '🔔🔔🔔 FLUTTER HOME: Received ride request via stream: ${rideRequest.rideId}',
+        );
+        print('🔔🔔🔔 FLUTTER HOME: Pickup: ${rideRequest.pickupAddress}');
+
+        if (mounted) {
+          _showRideRequestOverlay(rideRequest);
+        }
+      },
+      onError: (error) {
+        print('❌❌❌ FLUTTER HOME: Stream error: $error');
+      },
+    );
+
     // Enhanced ride request listener with proper state handling
     rideProvider.addListener(() {
       // Show ride request overlay when new request received

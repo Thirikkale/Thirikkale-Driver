@@ -19,6 +19,9 @@ class RideProvider extends ChangeNotifier {
   final RideRequestApiService _rideRequestApiService = RideRequestApiService();
   final WebSocketService _webSocketService = WebSocketService();
 
+  Stream<RideRequest> get rideRequestStream =>
+      _webSocketService.rideRequestStream;
+
   RideRequest? _currentRideRequest;
   RideStatus _rideStatus = RideStatus.idle;
   List<RideRequest> _pendingRideRequests = [];
@@ -89,46 +92,23 @@ class RideProvider extends ChangeNotifier {
   ) async {
     print('🔊 RideProvider: Starting WebSocket ride request listener');
 
-    try {
-      // Connect to WebSocket
-      await _webSocketService.connect(driverId, accessToken);
+    // Connect WebSocket
+    await _webSocketService.connect(driverId, accessToken);
 
-      // Listen to connection status
-      _connectionSubscription = _webSocketService.connectionStream.listen((
-        isConnected,
-      ) {
-        _isConnected = isConnected;
+    // ✅ Set up stream listener
+    _webSocketService.rideRequestStream.listen(
+      (rideRequest) {
+        print(
+          '🔔🔔🔔 RIDE PROVIDER: Received ride request: ${rideRequest.rideId}',
+        );
+        _currentRideRequest = rideRequest;
+        _rideStatus = RideStatus.requestReceived;
         notifyListeners();
-      });
-
-      // Listen to ride requests
-      _rideRequestSubscription =
-          _webSocketService.rideRequestStream.listen(
-                (rideRequest) {
-                  print(
-                    '📨 RideProvider: Received ride request: ${rideRequest.rideId}',
-                  );
-                  _handleNewRideRequest(rideRequest);
-                },
-                onError: (error) {
-                  print('❌ RideProvider: Error in ride request stream: $error');
-                },
-              )
-              as StreamSubscription<RideRequest>?;
-
-      // Listen to ride updates
-      _rideUpdateSubscription = _webSocketService.rideUpdateStream.listen(
-        (update) {
-          print('📨 RideProvider: Received ride update: $update');
-          _handleRideUpdate(update);
-        },
-        onError: (error) {
-          print('❌ RideProvider: Error in ride update stream: $error');
-        },
-      );
-    } catch (e) {
-      print('❌ RideProvider: Error starting WebSocket listener: $e');
-    }
+      },
+      onError: (error) {
+        print('❌❌❌ RIDE PROVIDER: Stream error: $error');
+      },
+    );
   }
 
   // Subscribe to geographical channels for ride requests
