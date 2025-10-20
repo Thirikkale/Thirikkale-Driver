@@ -7,11 +7,13 @@ import 'package:uuid/uuid.dart';
 
 class LocationSearchWidget extends StatefulWidget {
   final Function(String locationName, LatLng location) onLocationSelected;
+  final VoidCallback? onClear; // Callback for when the search is cleared
   final LatLng? currentUserLocation;
 
   const LocationSearchWidget({
     super.key,
     required this.onLocationSelected,
+    this.onClear,
     this.currentUserLocation,
   });
 
@@ -55,8 +57,6 @@ class _LocationSearchWidgetState extends State<LocationSearchWidget> {
     }
     if (!_focusNode.hasFocus) {
       _removeOverlay();
-
-      // Clear predictions when focus is lost
       setState(() {
         _predictions.clear();
       });
@@ -176,7 +176,6 @@ class _LocationSearchWidgetState extends State<LocationSearchWidget> {
 
           _sessionToken = null;
 
-          // Ensure overlay doesnot show
           setState(() {
             _predictions.clear();
           });
@@ -208,7 +207,7 @@ class _LocationSearchWidgetState extends State<LocationSearchWidget> {
           focusNode: _focusNode,
           decoration: InputDecoration(
             hintText: 'Search for a place...',
-            hintStyle: TextStyle(fontWeight: FontWeight.w600),
+            hintStyle: const TextStyle(fontWeight: FontWeight.w600),
             prefixIcon: const Icon(
               Icons.search,
               color: AppColors.textSecondary,
@@ -241,6 +240,10 @@ class _LocationSearchWidgetState extends State<LocationSearchWidget> {
                         _searchController.clear();
                         _removeOverlay();
                         _sessionToken = null;
+                        // Trigger the callback
+                        if (widget.onClear != null) {
+                          widget.onClear!();
+                        }
                       },
                     )
                     : null,

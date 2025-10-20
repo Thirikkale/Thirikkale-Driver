@@ -197,16 +197,118 @@ class DriverService {
     }
   }
 
+  // Register a new vehicle for a driver
+  Future<Map<String, dynamic>> registerVehicle({
+    required String driverId,
+    required String vehicleType,
+    String? registrationNumber, // Optional for primary vehicle
+    required String jwtToken,
+  }) async {
+    try {
+      print('🚀 Registering new vehicle...');
+      print('🚙 Vehicle Type: $vehicleType');
+      if (registrationNumber != null) {
+        print('📝 Registration Number: $registrationNumber');
+      }
+
+      final url = ApiConfig.registerVehicle(driverId);
+      final headers = ApiConfig.getJWTHeaders(jwtToken);
+
+      // ✅ Build body conditionally
+      final Map<String, dynamic> bodyData = {'vehicleType': vehicleType};
+
+      // Only add registration number if provided and not empty
+      if (registrationNumber != null && registrationNumber.isNotEmpty) {
+        bodyData['vehicleRegistration'] = registrationNumber;
+      }
+
+      final body = jsonEncode(bodyData);
+      print('📤 Request body: $body');
+
+      final response = await http.post(
+        Uri.parse(url),
+        headers: headers,
+        body: body,
+      );
+
+      print('🚗 Vehicle Register response status: ${response.statusCode}');
+      print('🚗 Vehicle Register response body: ${response.body}');
+
+      final responseData = jsonDecode(response.body);
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        print(
+          '✅ Vehicle registered successfully with ID: ${responseData['vehicleId']}',
+        );
+        return {'success': true, 'data': responseData};
+      } else {
+        return {
+          'success': false,
+          'error': responseData['message'] ?? 'Failed to register vehicle',
+          'statusCode': response.statusCode,
+        };
+      }
+    } catch (e) {
+      print('❌ Vehicle registration error: $e');
+      return {'success': false, 'error': 'Network error: $e'};
+    }
+  }
+
+  // Set a vehicle as primary
+  Future<Map<String, dynamic>> setPrimaryVehicle({
+    required String driverId,
+    required String vehicleId,
+    required String jwtToken,
+  }) async {
+    try {
+      print('👑 Setting vehicle $vehicleId as primary...');
+      final url = ApiConfig.setPrimaryVehicle(driverId, vehicleId);
+      final headers = ApiConfig.getJWTHeaders(jwtToken);
+
+      // This is often a POST or PUT request with an empty body
+      final response = await http.post(Uri.parse(url), headers: headers);
+
+      if (response.statusCode == 200) {
+        print('✅ Vehicle set as primary successfully.');
+        return {'success': true, 'message': 'Vehicle set as primary'};
+      } else {
+        final responseData = jsonDecode(response.body);
+        return {
+          'success': false,
+          'error': responseData['message'] ?? 'Failed to set primary vehicle',
+        };
+      }
+    } catch (e) {
+      print('❌ Set primary vehicle error: $e');
+      return {'success': false, 'error': 'Network error: $e'};
+    }
+  }
+
   Future<Map<String, dynamic>> uploadDocument({
     required String driverId,
     required String documentType,
     required File imageFile,
     required String jwtToken,
+    String? vehicleId,
   }) async {
     try {
       print('📤 Uploading document: $documentType for driver: $driverId');
 
-      String endpoint = _getDocumentEndpoint(driverId, documentType);
+      // Do the check once here
+      if (DocumentTypes.isVehicleDocument(documentType)) {
+        if (vehicleId == null) {
+          throw Exception(
+            'Vehicle ID is required for vehicle document uploads.',
+          );
+        }
+      }
+
+      final endpoint = _getDocumentEndpoint(
+        driverId,
+        documentType,
+        vehicleId ?? '', // guaranteed non-null for vehicle docs
+      );
+
       print('📍 Upload endpoint: $endpoint');
 
       // Validate file exists
@@ -246,6 +348,7 @@ class DriverService {
 
       print('📁 File name: $fileName');
       print('🎭 MIME type: $mimeType');
+      print('🚗 Vehicle ID: $vehicleId');
 
       // Add file with proper MIME type
       request.files.add(
@@ -257,7 +360,7 @@ class DriverService {
         ),
       );
 
-      // Add form fields that your backend might expect
+      // Form fields that your backend might expect
       request.fields['documentType'] = _mapDocumentType(documentType);
       request.fields['driverId'] = driverId;
 
@@ -371,18 +474,22 @@ class DriverService {
   }
 
   // Helper method to get document endpoint
-  String _getDocumentEndpoint(String driverId, String documentType) {
+  String _getDocumentEndpoint(
+    String driverId,
+    String documentType,
+    String vehicleId,
+  ) {
     switch (documentType) {
       case 'profile_picture':
         return ApiConfig.uploadSelfie(driverId);
       case 'driving_license':
         return ApiConfig.uploadDrivingLicense(driverId);
       case 'revenue_license':
-        return ApiConfig.uploadRevenueLicense(driverId);
+        return ApiConfig.uploadRevenueLicense(driverId, vehicleId);
       case 'vehicle_registration':
-        return ApiConfig.uploadVehicleRegistration(driverId);
+        return ApiConfig.uploadVehicleRegistration(driverId, vehicleId);
       case 'vehicle_insurance':
-        return ApiConfig.uploadVehicleInsurance(driverId);
+        return ApiConfig.uploadVehicleInsurance(driverId, vehicleId);
       default:
         throw Exception('Unknown document type: $documentType');
     }
@@ -444,47 +551,47 @@ class DriverService {
     }
   }
 
-  // Get driver verification status
-  Future<Map<String, dynamic>> getVerificationStatus({
-    required String driverId,
-    required String jwtToken, // Changed from firebaseToken
-  }) async {
-    try {
-      print('🔍 Getting verification status for: $driverId');
+  // // Get driver verification status
+  // Future<Map<String, dynamic>> getVerificationStatus({
+  //   required String driverId,
+  //   required String jwtToken, // Changed from firebaseToken
+  // }) async {
+  //   try {
+  //     print('🔍 Getting verification status for: $driverId');
 
-      final response = await http
-          .get(
-            Uri.parse(ApiConfig.getVerificationStatus(driverId)),
-            headers: {
-              ...ApiConfig.defaultHeaders,
-              'Authorization': 'Bearer $jwtToken',
-            },
-          )
-          .timeout(ApiConfig.receiveTimeout);
+  //     final response = await http
+  //         .get(
+  //           Uri.parse(ApiConfig.getVerificationStatus(driverId)),
+  //           headers: {
+  //             ...ApiConfig.defaultHeaders,
+  //             'Authorization': 'Bearer $jwtToken',
+  //           },
+  //         )
+  //         .timeout(ApiConfig.receiveTimeout);
 
-      print('📨 Verification status response: ${response.statusCode}');
-      print('📄 Verification response body: ${response.body}');
+  //     print('📨 Verification status response: ${response.statusCode}');
+  //     print('📄 Verification response body: ${response.body}');
 
-      final responseData = jsonDecode(response.body);
+  //     final responseData = jsonDecode(response.body);
 
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        return {'success': true, 'data': responseData};
-      } else {
-        return {
-          'success': false,
-          'error':
-              responseData['message'] ?? 'Failed to get verification status',
-          'statusCode': response.statusCode,
-        };
-      }
-    } catch (e) {
-      print('❌ Verification error: $e');
-      return {
-        'success': false,
-        'error': 'Failed to get verification status: $e',
-      };
-    }
-  }
+  //     if (response.statusCode >= 200 && response.statusCode < 300) {
+  //       return {'success': true, 'data': responseData};
+  //     } else {
+  //       return {
+  //         'success': false,
+  //         'error':
+  //             responseData['message'] ?? 'Failed to get verification status',
+  //         'statusCode': response.statusCode,
+  //       };
+  //     }
+  //   } catch (e) {
+  //     print('❌ Verification error: $e');
+  //     return {
+  //       'success': false,
+  //       'error': 'Failed to get verification status: $e',
+  //     };
+  //   }
+  // }
 
   // Get document status for a driver
   Future<Map<String, dynamic>> getDocumentStatus(
@@ -531,50 +638,74 @@ class DriverService {
   }
 
   // Update vehicle type for a driver
-  Future<Map<String, dynamic>> updateVehicleType(
-    String driverId,
-    String vehicleType,
-    String accessToken,
-  ) async {
+  Future<Map<String, dynamic>> updatePrimaryVehicleType({
+    required String driverId,
+    required String vehicleType,
+    required String jwtToken,
+  }) async {
     try {
-      print('🚗 Updating vehicle type for driver: $driverId to: $vehicleType');
+      print('🚗 Updating primary vehicle type...');
+      final url = ApiConfig.setPrimaryVehicleType(
+        driverId,
+      ); // Using the specific endpoint
+      final headers = ApiConfig.getJWTHeaders(jwtToken);
+      final body = jsonEncode({'vehicleType': vehicleType});
 
-      final requestBody = {'vehicleType': vehicleType};
+      final response = await http.put(
+        Uri.parse(url),
+        headers: headers,
+        body: body,
+      );
 
-      final response = await http
-          .put(
-            Uri.parse(ApiConfig.updateVehicleType(driverId)),
-            headers: {
-              ...ApiConfig.defaultHeaders,
-              'Authorization': 'Bearer $accessToken',
-              'Content-Type': 'application/json',
-            },
-            body: jsonEncode(requestBody),
-          )
-          .timeout(const Duration(seconds: 30));
-
-      print('📨 Vehicle type update response status: ${response.statusCode}');
-      print('🚗 Vehicle type update response body: ${response.body}');
-
-      final responseData = jsonDecode(response.body);
-
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        return {
-          'success': true,
-          'message':
-              responseData['message'] ?? 'Vehicle type updated successfully',
-          'data': responseData['data'] ?? responseData,
-        };
+      if (response.statusCode == 200) {
+        return {'success': true, 'message': 'Primary vehicle type updated'};
       } else {
+        final responseData = jsonDecode(response.body);
         return {
           'success': false,
-          'error': responseData['message'] ?? 'Failed to update vehicle type',
-          'statusCode': response.statusCode,
+          'error': responseData['message'] ?? 'Update failed',
         };
       }
     } catch (e) {
-      print('❌ Vehicle type update error: $e');
-      return {'success': false, 'error': 'Failed to update vehicle type: $e'};
+      print('❌ Update primary vehicle type error: $e');
+      return {'success': false, 'error': 'Network error: $e'};
+    }
+  }
+
+  // Update vehicle type for a driver
+  Future<Map<String, dynamic>> updateNewVehicleType({
+    required String driverId,
+    required String vehicleId,
+    required String vehicleType,
+    required String jwtToken,
+  }) async {
+    try {
+      print('🚗 Updating new vehicle type...');
+      final url = ApiConfig.setSecondaryVehicleType(
+        driverId,
+        vehicleId,
+      ); // Using the specific endpoint
+      final headers = ApiConfig.getJWTHeaders(jwtToken);
+      final body = jsonEncode({'vehicleType': vehicleType});
+
+      final response = await http.put(
+        Uri.parse(url),
+        headers: headers,
+        body: body,
+      );
+
+      if (response.statusCode == 200) {
+        return {'success': true, 'message': 'New vehicle type updated'};
+      } else {
+        final responseData = jsonDecode(response.body);
+        return {
+          'success': false,
+          'error': responseData['message'] ?? 'Update failed',
+        };
+      }
+    } catch (e) {
+      print('❌ Update new vehicle type error: $e');
+      return {'success': false, 'error': 'Network error: $e'};
     }
   }
 }

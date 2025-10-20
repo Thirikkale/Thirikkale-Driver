@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:thirikkale_driver/features/authentication/screens/auth_wrapper.dart';
 import 'package:thirikkale_driver/features/authentication/screens/document_upload_screen.dart';
 import 'package:thirikkale_driver/features/authentication/screens/get_started_screen.dart';
 import 'package:thirikkale_driver/features/authentication/screens/mobile_registration_screen.dart';
 import 'package:thirikkale_driver/features/authentication/screens/name_registration_screen.dart';
-import 'package:thirikkale_driver/features/home/screens/home_screen.dart';
 import 'package:thirikkale_driver/features/home/screens/driver_home_screen.dart';
 import 'package:thirikkale_driver/features/drivepass/screens/drive_pass_screen.dart';
 import 'package:thirikkale_driver/features/drivepass/screens/drive_pass_history_screen.dart';
@@ -15,7 +15,7 @@ import 'package:thirikkale_driver/features/earnings/screens/trips_payment_screen
 
 class AppRoutes {
   static const String initial = '/';
-  static const String home = '/home';
+  static const String getStarted = '/get-started';
   static const String driverHome = '/driver-home';
   static const String nameReg = '/name-registration';
   static const String mobileRegistration = '/mobile-registration';
@@ -33,12 +33,12 @@ class AppRoutes {
 
   static Map<String, WidgetBuilder> getRoutes() {
     return {
-      initial: (context) => const GetStartedScreen(),
-      home: (context) => const HomeScreen(),
+      initial: (context) => const AuthWrapper(),
+      getStarted: (context) => const GetStartedScreen(),
       driverHome: (context) => const DriverHomeScreen(),
       nameReg: (context) => const NameRegistrationScreen(),
       mobileRegistration: (context) => const MobileRegistrationScreen(),
-      documentUpload: (context) => const DocumentUploadScreen(firstName: "Nikila"),
+      documentUpload: (context) => const DocumentUploadScreen(firstName: "Driver"),
       drivePass: (context) => const DrivePassScreen(),
       drivePassHistory: (context) => const DrivePassHistoryScreen(),
       reviews: (context) => const ReviewsScreen(),

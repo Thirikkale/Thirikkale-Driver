@@ -8,7 +8,9 @@ import 'package:thirikkale_driver/features/authentication/widgets/upload_screen_
 import 'package:thirikkale_driver/widgets/common/custom_appbar.dart';
 
 class VehicleInsuranceScreen extends StatefulWidget {
-  const VehicleInsuranceScreen({super.key});
+  final String vehicleId;
+
+  const VehicleInsuranceScreen({super.key, required this.vehicleId});
 
   @override
   State<VehicleInsuranceScreen> createState() => _VehicleInsuranceScreenState();
@@ -19,7 +21,10 @@ class _VehicleInsuranceScreenState extends State<VehicleInsuranceScreen> {
     final result = await Navigator.of(context).push<bool>(
       NoAnimationPageRoute(
         builder:
-            (context) => const CameraScreen(documentType: 'vehicle_insurance'),
+            (context) => CameraScreen(
+              documentType: 'vehicle_insurance',
+              vehicleId: widget.vehicleId,
+            ),
       ),
     );
 

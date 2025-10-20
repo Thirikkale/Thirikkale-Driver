@@ -2,9 +2,18 @@ class ApiConfig {
   // Base URLs - Update this IP address to your backend server's IP
   // IMPORTANT: Replace 'YOUR_BACKEND_IP' with the actual IP address of your backend device
   // Example: 'http://192.168.1.100:8081/user-service/api/v1'
-  static const String baseUrl = 'http://192.168.98.69:8081/user-service/api/v1';
-  static const String authBaseUrl = '$baseUrl/auth';
-  static const String driversBaseUrl = '$baseUrl/drivers';
+  static const String baseIp =
+      '10.138.196.69'; // Update this to match your backend IP
+
+  // Use baseIp consistently
+  static const String userServiceBaseUrl =
+      'http://$baseIp:8081/user-service/api/v1';
+  static const String rideServiceBaseUrl =
+      'http://$baseIp:8082/ride-service/api/v1';
+  static const String webSocketUrl = 'http://$baseIp:8082';
+
+  static const String authBaseUrl = '$userServiceBaseUrl/auth';
+  static const String driversBaseUrl = '$userServiceBaseUrl/drivers';
 
   // Timeout configurations (increased for network latency and document processing)
   static const Duration connectTimeout = Duration(seconds: 45);
@@ -33,27 +42,45 @@ class ApiConfig {
   static String updateDriverProfile(String driverId) =>
       '$driversBaseUrl/$driverId/profile';
 
-  // Set Vehicle Type
-  static String updateVehicleType(String driverId) =>
-      '$driversBaseUrl/$driverId/vehicle-type';
+  // Vehicle management Endpoints
+  static String registerVehicle(String driverId) =>
+      '$driversBaseUrl/$driverId/vehicles';
+  static String getDriverVehicles(String driverId) =>
+      '$driversBaseUrl/$driverId/vehicles';
+  static String getVehicleById(String driverId, String vehicleId) =>
+      '$driversBaseUrl/$driverId/vehicles/$vehicleId';
+  static String setPrimaryVehicle(String driverId, String vehicleId) =>
+      '$driversBaseUrl/$driverId/vehicles/$vehicleId/set-primary';
 
-  // Document Upload Endpoints
+  // Set vehicle types
+  static String setPrimaryVehicleType(String driverId) =>
+      '$driversBaseUrl/$driverId/primary-vehicle/vehicle-type';
+
+  static String setSecondaryVehicleType(String driverId, String vehicleId) =>
+      '$driversBaseUrl/$driverId/vehicles/$vehicleId/vehicle-type';
+
+  // get all the vehicle types in the system
+  static const String getVehicleTypes = '$driversBaseUrl/vehicle-types';
+
+  // Personal Document Upload Endpoints (Driver-specific)
   static String uploadSelfie(String driverId) =>
       '$driversBaseUrl/$driverId/documents/selfie';
   static String uploadDrivingLicense(String driverId) =>
       '$driversBaseUrl/$driverId/documents/driving-license';
-  static String uploadRevenueLicense(String driverId) =>
-      '$driversBaseUrl/$driverId/documents/revenue-license';
-  static String uploadVehicleRegistration(String driverId) =>
-      '$driversBaseUrl/$driverId/documents/vehicle-registration';
-  static String uploadVehicleInsurance(String driverId) =>
-      '$driversBaseUrl/$driverId/documents/vehicle-insurance';
+
+  // Vehicle Document Upload Endpoints (Vehicle-specific)
+  static String uploadRevenueLicense(String driverId, String vehicleId) =>
+      '$driversBaseUrl/$driverId/vehicles/$vehicleId/documents/revenue-license';
+  static String uploadVehicleRegistration(String driverId, String vehicleId) =>
+      '$driversBaseUrl/$driverId/vehicles/$vehicleId/documents/vehicle-registration';
+  static String uploadVehicleInsurance(String driverId, String vehicleId) =>
+      '$driversBaseUrl/$driverId/vehicles/$vehicleId/documents/vehicle-insurance';
 
   // Document status endpoints
   static String getDocumentStatus(String driverId) =>
       '$driversBaseUrl/$driverId/documents/status';
-  static String getVerificationStatus(String driverId) =>
-      '$driversBaseUrl/$driverId/verification/status';
+  static String getProcessingStatus(String driverId) =>
+      '$driversBaseUrl/$driverId/processing-status';
 
   // Driver Status Endpoints
   static String updateAvailability(String driverId) =>
@@ -62,6 +89,56 @@ class ApiConfig {
   static const String pendingVerification =
       '$driversBaseUrl/pending-verification';
   static const String availableDrivers = '$driversBaseUrl/available';
+
+  // Ride Management
+  static const String requestRide = '$rideServiceBaseUrl/rides/request';
+  static String acceptRide(String rideId) =>
+      '$rideServiceBaseUrl/rides/$rideId/accept';
+  static String startRide(String rideId) =>
+      '$rideServiceBaseUrl/rides/$rideId/start';
+  static String completeRide(String rideId) =>
+      '$rideServiceBaseUrl/rides/$rideId/complete';
+  static String cancelRide(String rideId) =>
+      '$rideServiceBaseUrl/rides/$rideId/cancel';
+  static String rateRide(String rideId) =>
+      '$rideServiceBaseUrl/rides/$rideId/rate';
+
+  // Driver Location & Availability
+  static String updateDriverLocation(String driverId) =>
+      '$rideServiceBaseUrl/drivers/$driverId/location';
+  static String updateDriverAvailability(String driverId) =>
+      '$rideServiceBaseUrl/drivers/$driverId/availability';
+  static String getDriverLocation(String driverId) =>
+      '$rideServiceBaseUrl/drivers/$driverId/location';
+  static const String getNearbyDrivers = '$rideServiceBaseUrl/drivers/nearby';
+  static String removeDriverLocation(String driverId) =>
+      '$rideServiceBaseUrl/drivers/$driverId/location';
+  static String driverHeartbeat(String driverId) =>
+      '$rideServiceBaseUrl/drivers/$driverId/heartbeat';
+
+  // Ride History & Status
+  static String getDriverRides(String driverId) =>
+      '$rideServiceBaseUrl/rides/driver/$driverId';
+  static String getActiveRides(String userId) =>
+      '$rideServiceBaseUrl/rides/active/$userId';
+
+  // Payment management
+  static String getDriverPayments(String driverId) =>
+      '$rideServiceBaseUrl/payments/driver/$driverId';
+  static String getDriverEarnings(String driverId) =>
+      '$rideServiceBaseUrl/payments/driver/$driverId/earnings';
+
+  // Pub-sub Ride system
+  static String subscribeDriver(String driverId) =>
+      '$rideServiceBaseUrl/pubsub/drivers/$driverId/subscribe';
+  static String unsubscribeDriver(String driverId) =>
+      '$rideServiceBaseUrl/pubsub/drivers/$driverId/unsubscribe';
+  static String updatePubSubDriverLocation(String driverId) =>
+      '$rideServiceBaseUrl/pubsub/drivers/$driverId/location';
+  static String acceptRideRequest(String requestId) =>
+      '$rideServiceBaseUrl/pubsub/ride-requests/$requestId/accept';
+  static String rejectRideRequest(String requestId) =>
+      '$rideServiceBaseUrl/pubsub/ride-requests/$requestId/reject';
 
   // Headers
   static Map<String, String> get defaultHeaders => {
@@ -113,16 +190,29 @@ class DriverEndpoints {
   static String updateProfile(String driverId) =>
       ApiConfig.updateDriverProfile(driverId);
 
-  // Document Uploads
+  // Vehicle Management
+  static String registerVehicle(String driverId) =>
+      ApiConfig.registerVehicle(driverId);
+  static String getVehicles(String driverId) =>
+      ApiConfig.getDriverVehicles(driverId);
+  static String getVehicle(String driverId, String vehicleId) =>
+      ApiConfig.getVehicleById(driverId, vehicleId);
+  static String setPrimary(String driverId, String vehicleId) =>
+      ApiConfig.setPrimaryVehicle(driverId, vehicleId);
+  static const String vehicleTypes = ApiConfig.getVehicleTypes;
+
+  // Personal Document Uploads
   static String selfie(String driverId) => ApiConfig.uploadSelfie(driverId);
   static String drivingLicense(String driverId) =>
       ApiConfig.uploadDrivingLicense(driverId);
-  static String revenueLicense(String driverId) =>
-      ApiConfig.uploadRevenueLicense(driverId);
-  static String vehicleRegistration(String driverId) =>
-      ApiConfig.uploadVehicleRegistration(driverId);
-  static String vehicleInsurance(String driverId) =>
-      ApiConfig.uploadVehicleInsurance(driverId);
+
+  // Vehicle Document Uploads
+  static String revenueLicense(String driverId, String vehicleId) =>
+      ApiConfig.uploadRevenueLicense(driverId, vehicleId);
+  static String vehicleRegistration(String driverId, String vehicleId) =>
+      ApiConfig.uploadVehicleRegistration(driverId, vehicleId);
+  static String vehicleInsurance(String driverId, String vehicleId) =>
+      ApiConfig.uploadVehicleInsurance(driverId, vehicleId);
 
   // Driver Operations
   static String availability(String driverId) =>
@@ -130,6 +220,49 @@ class DriverEndpoints {
   static const String pendingDocs = ApiConfig.pendingDocuments;
   static const String pendingVerification = ApiConfig.pendingVerification;
   static const String available = ApiConfig.availableDrivers;
+
+  // Ride Management
+  static String acceptRide(String rideId) => ApiConfig.acceptRide(rideId);
+  static String startRide(String rideId) => ApiConfig.startRide(rideId);
+  static String completeRide(String rideId) => ApiConfig.completeRide(rideId);
+  static String cancelRide(String rideId) => ApiConfig.cancelRide(rideId);
+  static String rateRide(String rideId) => ApiConfig.rateRide(rideId);
+
+  // Location & Availability
+  static String updateLocation(String driverId) =>
+      ApiConfig.updateDriverLocation(driverId);
+  static String updateAvailability(String driverId) =>
+      ApiConfig.updateDriverAvailability(driverId);
+  static String getLocation(String driverId) =>
+      ApiConfig.getDriverLocation(driverId);
+  static String removeLocation(String driverId) =>
+      ApiConfig.removeDriverLocation(driverId);
+  static String heartbeat(String driverId) =>
+      ApiConfig.driverHeartbeat(driverId);
+
+  // Ride History
+  static String rideHistory(String driverId) =>
+      ApiConfig.getDriverRides(driverId);
+  static String activeRides(String driverId) =>
+      ApiConfig.getActiveRides(driverId);
+
+  // Earnings & Payments
+  static String payments(String driverId) =>
+      ApiConfig.getDriverPayments(driverId);
+  static String earnings(String driverId) =>
+      ApiConfig.getDriverEarnings(driverId);
+
+  // PubSub System
+  static String subscribe(String driverId) =>
+      ApiConfig.subscribeDriver(driverId);
+  static String unsubscribe(String driverId) =>
+      ApiConfig.unsubscribeDriver(driverId);
+  static String pubSubLocation(String driverId) =>
+      ApiConfig.updatePubSubDriverLocation(driverId);
+  static String acceptRideRequest(String requestId) =>
+      ApiConfig.acceptRideRequest(requestId);
+  static String rejectRideRequest(String requestId) =>
+      ApiConfig.rejectRideRequest(requestId);
 }
 
 // Driver profile completion steps
@@ -189,18 +322,26 @@ class DriverProfileSteps {
 
 // Document types for validation
 class DocumentTypes {
+  // Personal Documents
   static const String selfie = 'SELFIE';
   static const String drivingLicense = 'DRIVING_LICENSE';
+
+  // Vehicle Documents (per vehicle)
   static const String revenueLicense = 'REVENUE_LICENSE';
   static const String vehicleRegistration = 'VEHICLE_REGISTRATION';
   static const String vehicleInsurance = 'VEHICLE_INSURANCE';
 
-  static const List<String> requiredDocuments = [
-    selfie,
-    drivingLicense,
+  static const List<String> personalDocuments = [selfie, drivingLicense];
+
+  static const List<String> vehicleDocuments = [
     revenueLicense,
     vehicleRegistration,
     vehicleInsurance,
+  ];
+
+  static const List<String> allRequiredDocuments = [
+    ...personalDocuments,
+    ...vehicleDocuments,
   ];
 
   static const Map<String, String> documentNames = {
@@ -214,10 +355,21 @@ class DocumentTypes {
   static const Map<String, String> documentInstructions = {
     selfie: 'Take a clear selfie in good lighting',
     drivingLicense: 'Upload both front and back of your driving license',
-    revenueLicense: 'Upload your valid revenue license document',
-    vehicleRegistration: 'Upload vehicle registration certificate',
-    vehicleInsurance: 'Upload current vehicle insurance document',
+    revenueLicense:
+        'Upload your valid revenue license document for this vehicle',
+    vehicleRegistration:
+        'Upload vehicle registration certificate for this vehicle',
+    vehicleInsurance:
+        'Upload current vehicle insurance document for this vehicle',
   };
+
+  static bool isPersonalDocument(String documentType) {
+    return personalDocuments.contains(documentType);
+  }
+
+  static bool isVehicleDocument(String documentType) {
+    return vehicleDocuments.contains(documentType);
+  }
 }
 
 // Verification status constants

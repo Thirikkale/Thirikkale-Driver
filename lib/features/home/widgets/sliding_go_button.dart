@@ -16,6 +16,7 @@ class SlidingGoButton extends StatefulWidget {
   final String offlineText;
   final IconData onlineIcon;
   final IconData offlineIcon;
+  final bool isLoading;
 
   const SlidingGoButton({
     super.key,
@@ -24,7 +25,7 @@ class SlidingGoButton extends StatefulWidget {
     this.width = 300,
     this.height = 70,
     this.animationDuration = const Duration(milliseconds: 300),
-    this.onlineColor = AppColors.primaryGreen,
+    this.onlineColor = AppColors.offlineBtn,
     this.offlineColor = AppColors.primaryBlue,
     this.backgroundColor = AppColors.surfaceLight,
     this.outlineWidth = 2.0,
@@ -32,6 +33,7 @@ class SlidingGoButton extends StatefulWidget {
     this.offlineText = 'SLIDE TO GO ONLINE',
     this.onlineIcon = Icons.pause,
     this.offlineIcon = Icons.play_arrow,
+    this.isLoading = false,
   });
 
   @override
@@ -102,7 +104,7 @@ class _SlidingGoButtonState extends State<SlidingGoButton>
   }
 
   void _onPanStart(DragStartDetails details) {
-    if (_isAnimating) return;
+    if (_isAnimating || widget.isLoading) return;
 
     setState(() {
       _isDragging = true;
@@ -113,7 +115,7 @@ class _SlidingGoButtonState extends State<SlidingGoButton>
   }
 
   void _onPanUpdate(DragUpdateDetails details) {
-    if (_isAnimating) return;
+    if (_isAnimating || widget.isLoading) return;
 
     setState(() {
       _dragPosition = (_dragPosition + details.delta.dx).clamp(
@@ -130,7 +132,7 @@ class _SlidingGoButtonState extends State<SlidingGoButton>
   }
 
   void _onPanEnd(DragEndDetails details) {
-    if (_isAnimating) return;
+    if (_isAnimating || widget.isLoading) return;
 
     setState(() {
       _isDragging = false;
@@ -194,9 +196,13 @@ class _SlidingGoButtonState extends State<SlidingGoButton>
     final currentColor =
         widget.isOnline ? widget.onlineColor : widget.offlineColor;
     final currentText =
-        widget.isOnline ? widget.onlineText : widget.offlineText;
+        widget.isLoading
+            ? (widget.isOnline ? 'GOING OFFLINE...' : 'GOING ONLINE...')
+            : (widget.isOnline ? widget.onlineText : widget.offlineText);
     final currentIcon =
-        widget.isOnline ? widget.onlineIcon : widget.offlineIcon;
+        widget.isLoading
+            ? Icons.hourglass_empty
+            : (widget.isOnline ? widget.onlineIcon : widget.offlineIcon);
 
     return AnimatedBuilder(
       animation: _pulseAnimation,
@@ -212,7 +218,7 @@ class _SlidingGoButtonState extends State<SlidingGoButton>
               border: Border.all(
                 color:
                     widget.isOnline
-                        ? AppColors.primaryGreen
+                        ? AppColors.offlineBtn
                         : AppColors.primaryBlue,
                 width: widget.outlineWidth,
               ),
@@ -317,11 +323,23 @@ class _SlidingGoButtonState extends State<SlidingGoButton>
                               ),
                             ],
                           ),
-                          child: Icon(
-                            currentIcon,
-                            color: Colors.white,
-                            size: 28,
-                          ),
+                          child:
+                              widget.isLoading
+                                  ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white,
+                                      ),
+                                    ),
+                                  )
+                                  : Icon(
+                                    currentIcon,
+                                    color: Colors.white,
+                                    size: 28,
+                                  ),
                         ),
                       ),
                     );

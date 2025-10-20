@@ -15,3 +15,6 @@ key.properties
 
 # API KEYS
 secrets.properties
+
+# Firebase auth
+app/google-services.json
