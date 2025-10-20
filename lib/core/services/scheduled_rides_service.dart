@@ -100,18 +100,36 @@ class ScheduledRidesService {
     required String rideId,
     required String driverId,
   }) async {
-    final url = ApiConfig.assignDriverToScheduledRide(
-      rideId: rideId,
-      driverId: driverId,
-    );
-    final resp = await http.post(Uri.parse(url));
-    final Map<String, dynamic> body =
-        resp.body.isNotEmpty ? jsonDecode(resp.body) : {};
-    return {
-      'statusCode': resp.statusCode,
-      'data': body,
-      'success': resp.statusCode >= 200 && resp.statusCode < 300,
-    };
+    try {
+      final url = ApiConfig.assignDriverToScheduledRide(
+        rideId: rideId,
+        driverId: driverId,
+      );
+      print('🌐 Assigning driver - POST: $url');
+      
+      final resp = await http.put(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(const Duration(seconds: 45));
+      
+      print('📡 Assign driver response status: ${resp.statusCode}');
+      print('📡 Assign driver response body: ${resp.body}');
+      
+      final Map<String, dynamic> body =
+          resp.body.isNotEmpty ? jsonDecode(resp.body) : {};
+      return {
+        'statusCode': resp.statusCode,
+        'data': body,
+        'success': resp.statusCode >= 200 && resp.statusCode < 300,
+      };
+    } catch (e) {
+      print('❌ Error in assignDriver service: $e');
+      return {
+        'statusCode': 500,
+        'data': {'error': e.toString()},
+        'success': false,
+      };
+    }
   }
 
   Future<Map<String, dynamic>> removeDriver({

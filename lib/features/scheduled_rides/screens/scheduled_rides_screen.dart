@@ -3,8 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:thirikkale_driver/core/provider/auth_provider.dart';
 import 'package:thirikkale_driver/core/provider/location_provider.dart';
 import 'package:thirikkale_driver/core/provider/scheduled_rides_provider.dart';
-import 'package:thirikkale_driver/core/utils/app_styles.dart';
-import 'package:thirikkale_driver/features/scheduled_rides/models/scheduled_ride.dart';
+import 'package:thirikkale_driver/core/utils/snackbar_helper.dart';
+import 'package:thirikkale_driver/features/scheduled_rides/widgets/scheduled_ride_card.dart';
 
 class ScheduledRidesScreen extends StatelessWidget {
   const ScheduledRidesScreen({super.key});
@@ -68,6 +68,7 @@ class _ScheduledRidesViewState extends State<_ScheduledRidesView> with SingleTic
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF5F7FA), // Light gray-blue background
       appBar: AppBar(
         title: const Text('Scheduled Rides'),
         bottom: TabBar(
@@ -109,9 +110,23 @@ class _AcceptedTab extends StatelessWidget {
           return const Center(child: Text('No accepted scheduled rides yet'));
         }
         return ListView.separated(
+          padding: const EdgeInsets.all(20),
           itemCount: items.length,
-          separatorBuilder: (_, __) => const Divider(height: 1),
-          itemBuilder: (_, i) => _RideTile(ride: items[i], showUnassign: true),
+          separatorBuilder: (_, __) => const SizedBox(height: 16),
+          itemBuilder: (_, i) => ScheduledRideCard(
+            ride: items[i],
+            showUnassignButton: true,
+            onUnassign: () async {
+              final ok = await provider.removeDriver(rideId: items[i].id);
+              if (context.mounted) {
+                if (ok) {
+                  SnackbarHelper.showSuccessSnackBar(context, 'Successfully removed from ride');
+                } else {
+                  SnackbarHelper.showErrorSnackBar(context, 'Failed to remove from ride');
+                }
+              }
+            },
+          ),
         );
       },
     );
@@ -138,9 +153,41 @@ class _NearbyTab extends StatelessWidget {
         return RefreshIndicator(
           onRefresh: () => provider.fetchNearby(location),
           child: ListView.separated(
+            padding: const EdgeInsets.all(20),
             itemCount: items.length,
-            separatorBuilder: (_, __) => const Divider(height: 1),
-            itemBuilder: (_, i) => _RideTile(ride: items[i], showAssign: true),
+            separatorBuilder: (_, __) => const SizedBox(height: 16),
+            itemBuilder: (context, i) {
+              return Consumer<AuthProvider>(
+                builder: (context, auth, _) {
+                  return ScheduledRideCard(
+                    ride: items[i],
+                    showAssignButton: true,
+                    onAssign: () async {
+                      final driverId = auth.userId ?? auth.driverId;
+                      if (driverId == null) {
+                        if (context.mounted) {
+                          SnackbarHelper.showErrorSnackBar(context, 'Driver ID not found');
+                        }
+                        return;
+                      }
+                      
+                      final ok = await provider.assignDriver(
+                        ride: items[i],
+                        driverId: driverId,
+                      );
+                      
+                      if (context.mounted) {
+                        if (ok) {
+                          SnackbarHelper.showSuccessSnackBar(context, 'Successfully accepted ride!');
+                        } else {
+                          SnackbarHelper.showErrorSnackBar(context, 'Failed to accept ride');
+                        }
+                      }
+                    },
+                  );
+                },
+              );
+            },
           ),
         );
       },
@@ -227,9 +274,41 @@ class _RouteSearchTabState extends State<_RouteSearchTab> {
                   return const Center(child: Text('No matches'));
                 }
                 return ListView.separated(
+                  padding: const EdgeInsets.all(20),
                   itemCount: items.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1),
-                  itemBuilder: (_, i) => _RideTile(ride: items[i], showAssign: true),
+                  separatorBuilder: (_, __) => const SizedBox(height: 16),
+                  itemBuilder: (context, i) {
+                    return Consumer<AuthProvider>(
+                      builder: (context, auth, _) {
+                        return ScheduledRideCard(
+                          ride: items[i],
+                          showAssignButton: true,
+                          onAssign: () async {
+                            final driverId = auth.userId ?? auth.driverId;
+                            if (driverId == null) {
+                              if (context.mounted) {
+                                SnackbarHelper.showErrorSnackBar(context, 'Driver ID not found');
+                              }
+                              return;
+                            }
+                            
+                            final ok = await provider.assignDriver(
+                              ride: items[i],
+                              driverId: driverId,
+                            );
+                            
+                            if (context.mounted) {
+                              if (ok) {
+                                SnackbarHelper.showSuccessSnackBar(context, 'Successfully accepted ride!');
+                              } else {
+                                SnackbarHelper.showErrorSnackBar(context, 'Failed to accept ride');
+                              }
+                            }
+                          },
+                        );
+                      },
+                    );
+                  },
                 );
               },
             ),
@@ -249,49 +328,4 @@ class _RouteSearchTabState extends State<_RouteSearchTab> {
   }
 }
 
-class _RideTile extends StatelessWidget {
-  final ScheduledRide ride;
-  final bool showAssign;
-  final bool showUnassign;
-  const _RideTile({required this.ride, this.showAssign = false, this.showUnassign = false});
 
-  @override
-  Widget build(BuildContext context) {
-    final auth = context.watch<AuthProvider>();
-    return ListTile(
-      title: Text('${ride.pickupAddress} → ${ride.dropoffAddress}', maxLines: 2, overflow: TextOverflow.ellipsis),
-      subtitle: Text('Time: ${ride.scheduledTime} • ${ride.rideType ?? ''} ${ride.vehicleType ?? ''}'),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (showAssign)
-            IconButton(
-              icon: const Icon(Icons.add_task, color: AppColors.success),
-              onPressed: () async {
-                final driverId = auth.userId ?? auth.driverId; // stored user id
-                if (driverId == null) return;
-                final ok = await context.read<ScheduledRidesProvider>().assignDriver(
-                  ride: ride,
-                  driverId: driverId,
-                );
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(ok ? 'Assigned to ride' : 'Failed to assign')),
-                );
-              },
-            ),
-          if (showUnassign)
-            IconButton(
-              icon: const Icon(Icons.remove_circle, color: AppColors.error),
-              onPressed: () async {
-                final ok = await context.read<ScheduledRidesProvider>()
-                    .removeDriver(rideId: ride.id);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(ok ? 'Removed from ride' : 'Failed to remove')),
-                );
-              },
-            ),
-        ],
-      ),
-    );
-  }
-}

@@ -123,18 +123,51 @@ class ScheduledRidesProvider extends ChangeNotifier {
 
   // Assign driver to ride
   Future<bool> assignDriver({required ScheduledRide ride, required String driverId}) async {
-    final res = await _service.assignDriver(rideId: ride.id, driverId: driverId);
-    // If success, update accepted list (simplified)
-    final ok = res['success'] == true;
-    if (ok) {
-      // Update local lists
-      _accepted.removeWhere((r) => r.id == ride.id);
-      _accepted.add(ride);
-      _nearby.removeWhere((r) => r.id == ride.id);
-      _routeMatches.removeWhere((r) => r.id == ride.id);
-      notifyListeners();
+    try {
+      print('🚗 Attempting to assign driver $driverId to ride ${ride.id}');
+      final res = await _service.assignDriver(rideId: ride.id, driverId: driverId);
+      print('📦 Assign driver response: $res');
+      
+      // If success, update accepted list (simplified)
+      final ok = res['success'] == true;
+      if (ok) {
+        print('✅ Successfully assigned driver to ride');
+        // Update local lists - create a copy with driverId set
+        final updatedRide = ScheduledRide(
+          id: ride.id,
+          riderId: ride.riderId,
+          driverId: driverId, // Set the driver ID
+          pickupLatitude: ride.pickupLatitude,
+          pickupLongitude: ride.pickupLongitude,
+          pickupAddress: ride.pickupAddress,
+          dropoffLatitude: ride.dropoffLatitude,
+          dropoffLongitude: ride.dropoffLongitude,
+          dropoffAddress: ride.dropoffAddress,
+          scheduledTime: ride.scheduledTime,
+          status: ride.status,
+          passengers: ride.passengers,
+          vehicleType: ride.vehicleType,
+          rideType: ride.rideType,
+          isSharedRide: ride.isSharedRide,
+          maxFare: ride.maxFare,
+          distanceKm: ride.distanceKm,
+          isWomenOnly: ride.isWomenOnly,
+        );
+        
+        _accepted.removeWhere((r) => r.id == ride.id);
+        _accepted.add(updatedRide);
+        _nearby.removeWhere((r) => r.id == ride.id);
+        _routeMatches.removeWhere((r) => r.id == ride.id);
+        notifyListeners();
+      } else {
+        print('❌ Failed to assign driver - response indicates failure');
+      }
+      return ok;
+    } catch (e, stackTrace) {
+      print('❌ Error assigning driver: $e');
+      print('Stack trace: $stackTrace');
+      return false;
     }
-    return ok;
   }
 
   // Remove driver
