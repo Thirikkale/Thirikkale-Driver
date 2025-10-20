@@ -2,13 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:thirikkale_driver/core/services/location_service.dart';
 import 'package:thirikkale_driver/core/services/places_api_service.dart';
+import 'package:thirikkale_driver/core/services/web_socket_service.dart';
 
 class LocationProvider extends ChangeNotifier {
+  final WebSocketService _webSocketService = WebSocketService();
+
   // Current location state
   Map<String, dynamic>? _currentLocation;
   Position? _currentPosition;
   bool _isLoadingCurrentLocation = false;
   String? _locationError;
+  String? _activeRideId;
 
   // Places search state
   List<Map<String, dynamic>> _placePredictions = [];
@@ -20,7 +24,7 @@ class LocationProvider extends ChangeNotifier {
 
   // Getters
   Map<String, dynamic>? get currentLocation => _currentLocation;
-  Position? get currentPosition => _currentPosition; 
+  Position? get currentPosition => _currentPosition;
   bool get isLoadingCurrentLocation => _isLoadingCurrentLocation;
   String? get locationError => _locationError;
 
@@ -29,6 +33,12 @@ class LocationProvider extends ChangeNotifier {
   String? get searchError => _searchError;
 
   String get sessionToken => _sessionToken;
+
+  /// Tells the provider to start sending location updates to a specific ride topic.
+  void setActiveRide(String? rideId) {
+    _activeRideId = rideId;
+    print('📍 LocationProvider: Active ride set to: $_activeRideId');
+  }
 
   // Helper methods for state management
   void _setLoadingCurrentLocation(bool loading) {
@@ -245,7 +255,7 @@ class LocationProvider extends ChangeNotifier {
       speed: location['speed'] ?? 0.0,
       speedAccuracy: location['speedAccuracy'] ?? 0.0,
     );
-  
+
     // Schedule notification for after the current build phase
     WidgetsBinding.instance.addPostFrameCallback((_) {
       notifyListeners();

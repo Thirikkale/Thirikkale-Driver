@@ -144,6 +144,30 @@ class WebSocketService {
     }
   }
 
+  void sendActiveRideLocation({
+    required String rideId,
+    required double latitude,
+    required double longitude,
+  }) {
+    if (_stompClient == null || !_isConnected) {
+      print('❌ Cannot send active ride location: Not connected');
+      return;
+    }
+
+    // This is the new destination for in-ride tracking
+    final destination = '/app/ride/$rideId/location';
+    print('📍 Sending active ride location to: $destination');
+
+    _stompClient!.send(
+      destination: destination,
+      body: jsonEncode({
+        'latitude': latitude,
+        'longitude': longitude,
+        'isAvailable': false, // Driver is busy on a ride
+      }),
+    );
+  }
+
   void _subscribeToChannels(String driverId) {
     if (_stompClient == null || !_isConnected) {
       print('⚠️ Cannot subscribe - not connected');

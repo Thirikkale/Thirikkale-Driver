@@ -270,18 +270,23 @@ class _RideRequestCardState extends State<RideRequestCard>
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                        const Spacer(),
-                        // Ride ID
-                        Text(
-                          'ID: ${widget.rideRequest.rideId}',
-                          style: AppTextStyles.bodySmall.copyWith(
-                            color: AppColors.grey,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
                       ],
                     ),
+
                     const SizedBox(height: 16),
+
+                    // Ride ID (moved to new line)
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'ID: ${widget.rideRequest.rideId}',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.grey,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
 
                     // Pickup and destination
                     Row(
