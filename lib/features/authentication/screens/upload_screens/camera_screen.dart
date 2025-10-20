@@ -10,8 +10,9 @@ import 'package:thirikkale_driver/widgets/custom_modern_loading_overlay.dart';
 
 class CameraScreen extends StatefulWidget {
   final String documentType;
+  final String? vehicleId;
 
-  const CameraScreen({super.key, required this.documentType});
+  const CameraScreen({super.key, required this.documentType, this.vehicleId});
 
   @override
   State<CameraScreen> createState() => _CameraScreenState();
@@ -205,6 +206,7 @@ class _CameraScreenState extends State<CameraScreen> {
         final success = await authProvider.uploadDocument(
           documentType: widget.documentType,
           imagePath: newFile.path,
+          vehicleId: widget.vehicleId
         );
 
         await _handleUploadResult(success, authProvider);
@@ -213,6 +215,7 @@ class _CameraScreenState extends State<CameraScreen> {
         final success = await authProvider.uploadDocument(
           documentType: widget.documentType,
           imagePath: imageFile.path,
+          vehicleId: widget.vehicleId
         );
 
         await _handleUploadResult(success, authProvider);

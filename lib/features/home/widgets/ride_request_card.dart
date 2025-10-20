@@ -14,7 +14,7 @@ class RideRequestCard extends StatefulWidget {
     required this.rideRequest,
     required this.onAccept,
     required this.onDecline,
-    this.timeoutSeconds = 30,
+    this.timeoutSeconds = 20,
   });
 
   @override
@@ -270,18 +270,23 @@ class _RideRequestCardState extends State<RideRequestCard>
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                        const Spacer(),
-                        // Ride ID
-                        Text(
-                          'ID: ${widget.rideRequest.rideId}',
-                          style: AppTextStyles.bodySmall.copyWith(
-                            color: AppColors.grey,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
                       ],
                     ),
+
                     const SizedBox(height: 16),
+
+                    // Ride ID (moved to new line)
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'ID: ${widget.rideRequest.rideId}',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.grey,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
 
                     // Pickup and destination
                     Row(
@@ -457,7 +462,7 @@ class _RideRequestCardState extends State<RideRequestCard>
                       child: ElevatedButton(
                         onPressed: widget.onAccept,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.success,
+                          backgroundColor: AppColors.primaryBlue,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),

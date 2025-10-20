@@ -15,13 +15,14 @@ import 'package:thirikkale_driver/core/utils/app_dimensions.dart';
 import 'package:thirikkale_driver/core/utils/app_styles.dart';
 import 'package:thirikkale_driver/core/utils/navigation_utils.dart';
 import 'package:thirikkale_driver/core/utils/snackbar_helper.dart';
+import 'package:thirikkale_driver/features/home/models/ride_request_model.dart'
+    hide LatLng;
 import 'package:thirikkale_driver/features/home/widgets/driver_sidebar.dart';
 import 'package:thirikkale_driver/features/home/widgets/location_error.dart';
 import 'package:thirikkale_driver/features/home/widgets/location_search_widget.dart';
-import 'package:thirikkale_driver/features/home/widgets/ride_action_buttons.dart';
-// import 'package:thirikkale_driver/features/home/widgets/driver_status_widget.dart';
-// import 'package:thirikkale_driver/features/home/widgets/earnings_bottom_sheet.dart';
+import 'package:thirikkale_driver/features/home/widgets/ride_details_bottom_sheet.dart';
 import 'package:thirikkale_driver/features/home/widgets/sliding_go_button.dart';
+import 'package:thirikkale_driver/features/home/widgets/online_driver_bottom_sheet.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class DriverHomeScreen extends StatefulWidget {
@@ -46,6 +47,12 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   // Search state
   String? _selectedDestination;
   LatLng? _destinationLocation;
+  String? _currentlyDisplayedRideId;
+
+  bool _isShowingRideRequestOverlay = false;
+
+  final DraggableScrollableController _onlineSheetController =
+      DraggableScrollableController();
 
   @override
   void initState() {
@@ -62,17 +69,338 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeLocation();
-
-      // Fetches latest profile data
-      Provider.of<AuthProvider>(context, listen:false).fetchDriverProfile();
+      _connectWebSocket(); // ✅ Connect WebSocket once on screen load
+      _setupListeners();
     });
+  }
+
+  // ✅ Connect WebSocket once and keep it alive
+  void _connectWebSocket() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final rideProvider = Provider.of<RideProvider>(context, listen: false);
+    final driverId = authProvider.userId;
+    final accessToken = await authProvider.getCurrentToken();
+
+    if (driverId != null && accessToken != null) {
+      print(
+        '🔊 Starting persistent WebSocket connection for driver: $driverId',
+      );
+      await rideProvider.startListeningForRideRequests(driverId, accessToken);
+    }
+  }
+
+  void _setupListeners() {
+    final rideProvider = Provider.of<RideProvider>(context, listen: false);
+
+    // ✅ Add explicit stream listener
+    rideProvider.rideRequestStream.listen(
+      (rideRequest) {
+        print(
+          '🔔🔔🔔 FLUTTER HOME: Received ride request via stream: ${rideRequest.rideId}',
+        );
+        print('🔔🔔🔔 FLUTTER HOME: Pickup: ${rideRequest.pickupAddress}');
+
+        if (mounted) {
+          _showRideRequestOverlay(rideRequest);
+        }
+      },
+      onError: (error) {
+        print('❌❌❌ FLUTTER HOME: Stream error: $error');
+      },
+    );
+
+    // Enhanced ride request listener with proper state handling
+    rideProvider.addListener(() {
+      // Show ride request overlay when new request received
+      if (rideProvider.rideStatus == RideStatus.requestReceived &&
+          rideProvider.currentRideRequest != null &&
+          !rideProvider.isAcceptingRide &&
+          !_isShowingRideRequestOverlay) {
+        _showRideRequestOverlay(rideProvider.currentRideRequest!);
+      }
+
+      // Handle successful ride acceptance
+      if (rideProvider.rideStatus == RideStatus.accepted &&
+          rideProvider.currentRideRequest != null &&
+          _currentlyDisplayedRideId !=
+              rideProvider.currentRideRequest?.rideId) {
+        // Hide overlay if still showing
+        if (_isShowingRideRequestOverlay) {
+          RideRequestService().hideOverlay();
+          _isShowingRideRequestOverlay = false;
+        }
+
+        // Show success message
+        _showSuccessMessage('Ride accepted successfully!');
+
+        // Automatically create routes and show ride details
+        _createRideRoutes();
+        _currentlyDisplayedRideId = rideProvider.currentRideRequest?.rideId;
+      }
+
+      // Handle ride completion/cancellation
+      if (rideProvider.rideStatus == RideStatus.idle &&
+          _currentlyDisplayedRideId != null) {
+        // Clear routes and reset map
+        setState(() {
+          _polylines.clear();
+          _markers.removeWhere((m) => m.markerId.value != 'current_location');
+        });
+        _currentlyDisplayedRideId = null;
+        _animateToCurrentLocation();
+      }
+
+      // Handle acceptance errors
+      if (rideProvider.lastAcceptanceError != null) {
+        _handleAcceptanceError(rideProvider.lastAcceptanceError!);
+        rideProvider.clearAcceptanceError();
+      }
+    });
+  }
+
+  void _showRideRequestOverlay(RideRequest rideRequest) {
+    _isShowingRideRequestOverlay = true;
+
+    RideRequestService().showRideRequest(
+      context,
+      rideRequest,
+      () => _handleAcceptRide(rideRequest),
+      () => _handleDeclineRide(rideRequest),
+    );
+  }
+
+  Future<void> _handleAcceptRide(RideRequest rideRequest) async {
+    final rideProvider = Provider.of<RideProvider>(context, listen: false);
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+    // Hide the overlay
+    RideRequestService().hideOverlay();
+    _isShowingRideRequestOverlay = false;
+
+    // Show loading dialog
+    _showLoadingDialog('Accepting ride...');
+
+    final driverId = authProvider.userId;
+    final accessToken = await authProvider.getCurrentToken();
+
+    if (driverId == null || accessToken == null) {
+      _hideLoadingDialog();
+      _showErrorMessage('Authentication error. Please login again.');
+      return;
+    }
+
+    final result = await rideProvider.acceptRideWithDetails(
+      driverId,
+      accessToken,
+    );
+
+    _hideLoadingDialog();
+
+    if (result['success'] == true) {
+      // Success is handled by the listener in _setupRideRequestListener
+      print('✅ Ride accepted: ${rideRequest.rideId}');
+    } else {
+      // Error is handled by the listener in _setupRideRequestListener
+      print('❌ Failed to accept ride: ${result['error']}');
+    }
+  }
+
+  // ✅ Handle decline ride action
+  Future<void> _handleDeclineRide(RideRequest rideRequest) async {
+    final rideProvider = Provider.of<RideProvider>(context, listen: false);
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+    // Hide the overlay
+    RideRequestService().hideOverlay();
+    _isShowingRideRequestOverlay = false;
+
+    final driverId = authProvider.userId;
+    final accessToken = await authProvider.getCurrentToken();
+
+    await rideProvider.cancelRide('Driver declined', driverId, accessToken);
+
+    _showInfoMessage('Ride request declined');
+  }
+
+  // ✅ Show loading dialog
+  void _showLoadingDialog(String message) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (context) => WillPopScope(
+            onWillPop: () async => false,
+            child: Center(
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const CircularProgressIndicator(),
+                      const SizedBox(height: 16),
+                      Text(message),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+    );
+  }
+
+  // Hide loading dialog
+  void _hideLoadingDialog() {
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
+  }
+
+  // Show success message
+  void _showSuccessMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle, color: Colors.white),
+            const SizedBox(width: 12),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  // Show error message with retry option
+  void _showErrorMessage(String message, {VoidCallback? onRetry}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.error_outline, color: Colors.white),
+            const SizedBox(width: 12),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 4),
+        action:
+            onRetry != null
+                ? SnackBarAction(
+                  label: 'Retry',
+                  textColor: Colors.white,
+                  onPressed: onRetry,
+                )
+                : null,
+      ),
+    );
+  }
+
+  // Show info message
+  void _showInfoMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), duration: const Duration(seconds: 2)),
+    );
+  }
+
+  //  Handle acceptance errors with appropriate UI feedback
+  void _handleAcceptanceError(String error) {
+    // Determine if retry is possible based on error
+    bool canRetry =
+        !error.contains('already been accepted') &&
+        !error.contains('Authentication');
+
+    _showErrorMessage(
+      error,
+      onRetry:
+          canRetry
+              ? () {
+                final rideProvider = Provider.of<RideProvider>(
+                  context,
+                  listen: false,
+                );
+                if (rideProvider.currentRideRequest != null) {
+                  _handleAcceptRide(rideProvider.currentRideRequest!);
+                }
+              }
+              : null,
+    );
+  }
+
+  void _startLocationTracking() {
+    _locationSubscription = LocationService.watchLocation(
+      onLocationUpdate: (location) {
+        if (mounted) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            final locationProvider = Provider.of<LocationProvider>(
+              context,
+              listen: false,
+            );
+            final rideProvider = Provider.of<RideProvider>(
+              context,
+              listen: false,
+            );
+            final authProvider = Provider.of<AuthProvider>(
+              context,
+              listen: false,
+            );
+            final driverProvider = Provider.of<DriverProvider>(
+              context,
+              listen: false,
+            );
+
+            locationProvider.updateCurrentLocation(location);
+            _updateCurrentLocationMarker();
+
+            // Update location via WebSocket if online and connected
+            if (driverProvider.isOnline && rideProvider.isConnected) {
+              final driverId = authProvider.userId;
+              if (driverId != null) {
+                rideProvider.updateDriverLocation(
+                  driverId,
+                  location['latitude'],
+                  location['longitude'],
+                  true, // isAvailable
+                );
+              }
+            }
+          });
+        }
+      },
+      onError: (error) {
+        if (mounted) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            SnackbarHelper.showErrorSnackBar(context, error);
+          });
+        }
+      },
+    );
   }
 
   @override
   void dispose() {
+    // Remove the listener when disposing
+    final rideProvider = Provider.of<RideProvider>(context, listen: false);
+
+    // Remove listeners if they exist
+    try {
+      rideProvider.removeListener(_setupListeners);
+    } catch (e) {
+      print('Note: Ride provider listener was not attached');
+    }
+
     _locationSubscription?.cancel();
     _mapController?.dispose();
     LocationService.stopWatchingLocation();
+    rideProvider
+        .stopListeningForRideRequests(); // ✅ Disconnect WebSocket on dispose
+
+    if (_isShowingRideRequestOverlay) {
+      RideRequestService().hideOverlay();
+    }
+
     super.dispose();
   }
 
@@ -94,30 +422,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       _animateToCurrentLocation();
       _startLocationTracking();
     }
-  }
-
-  void _startLocationTracking() {
-    _locationSubscription = LocationService.watchLocation(
-      onLocationUpdate: (location) {
-        if (mounted) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            final locationProvider = Provider.of<LocationProvider>(
-              context,
-              listen: false,
-            );
-            locationProvider.updateCurrentLocation(location);
-            _updateCurrentLocationMarker();
-          });
-        }
-      },
-      onError: (error) {
-        if (mounted) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            SnackbarHelper.showErrorSnackBar(context, error);
-          });
-        }
-      },
-    );
   }
 
   void _updateCurrentLocationMarker() {
@@ -245,6 +549,16 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     _animateToShowBothLocations();
   }
 
+  // Clear created polyline by search
+  void _clearSearchRoutes() {
+    setState(() {
+      _selectedDestination = null;
+      _destinationLocation = null;
+      _polylines.clear();
+      _markers.removeWhere((marker) => marker.markerId.value == 'destination');
+    });
+  }
+
   void _createPolyline() async {
     final locationProvider = Provider.of<LocationProvider>(
       context,
@@ -303,32 +617,155 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     );
   }
 
-  void _toggleOnlineStatus() {
+  Future<void> _toggleOnlineStatus() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final driverProvider = Provider.of<DriverProvider>(context, listen: false);
-    driverProvider.toggleOnlineStatus();
+    final locationProvider = Provider.of<LocationProvider>(
+      context,
+      listen: false,
+    );
 
-    if (driverProvider.isOnline) {
-      _showGoOnlineBottomSheet();
+    // Get required data
+    final driverId = authProvider.userId;
+    final accessToken = await authProvider.getCurrentToken();
+
+    if (driverId == null || accessToken == null) {
+      SnackbarHelper.showErrorSnackBar(
+        context,
+        'Unable to update status. Please login again.',
+      );
+      return;
+    }
+
+    // Check if location is available
+    if (!locationProvider.isLocationAvailable) {
+      await locationProvider.getCurrentLocation();
+      if (!locationProvider.isLocationAvailable) {
+        _showLocationDialog(locationProvider);
+        return;
+      }
+    }
+
+    final currentPosition = locationProvider.currentPosition!;
+    print(
+      '✅ Using location: ${currentPosition.latitude}, ${currentPosition.longitude}',
+    );
+
+    // Show loading indicator
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              const SizedBox(width: 16),
+              Text(
+                driverProvider.isOnline
+                    ? 'Going offline...'
+                    : 'Going online...',
+              ),
+            ],
+          ),
+          duration: const Duration(seconds: 30),
+        ),
+      );
+    }
+
+    try {
+      final success = await driverProvider.toggleOnlineStatus(
+        driverId: driverId,
+        latitude: currentPosition.latitude,
+        longitude: currentPosition.longitude,
+        accessToken: accessToken,
+      );
+
+      // Hide loading snackbar
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      }
+
+      if (success) {
+        if (mounted) {
+          SnackbarHelper.showSuccessSnackBar(
+            context,
+            driverProvider.isOnline
+                ? 'You are now online and ready to receive rides!'
+                : 'You are now offline.',
+          );
+        }
+      } else {
+        if (mounted) {
+          SnackbarHelper.showErrorSnackBar(
+            context,
+            driverProvider.errorMessage ??
+                'Failed to update status. Please try again.',
+          );
+        }
+      }
+    } catch (e) {
+      // Hide loading snackbar
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        SnackbarHelper.showErrorSnackBar(
+          context,
+          'Network error. Please check your connection and try again.',
+        );
+      }
     }
   }
 
-  void _showGoOnlineBottomSheet() {
-    showModalBottomSheet(
+  void _showLocationDialog(LocationProvider locationProvider) {
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => const GoOnlineBottomSheet(),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Location Required'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  locationProvider.locationError ??
+                      'Location access is required to go online.',
+                ),
+                const SizedBox(height: 16),
+                const Text('Please ensure that:'),
+                const SizedBox(height: 8),
+                const Text('• Location services are enabled on your device'),
+                const Text('• Location permission is granted to this app'),
+                const SizedBox(height: 8),
+                Text(
+                  'Current status: ${locationProvider.locationError ?? "Unknown error"}',
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  Navigator.of(context).pop();
+                  await locationProvider.openLocationSettings();
+                },
+                child: const Text('Open Settings'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  Navigator.of(context).pop();
+                  await _initializeLocation();
+                },
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
     );
   }
-
-  // void _showEarningsBottomSheet() {
-  //   showModalBottomSheet(
-  //     context: context,
-  //     isScrollControlled: true,
-  //     backgroundColor: Colors.transparent,
-  //     builder: (context) => const EarningsBottomSheet(),
-  //   );
-  // }
 
   LatLng _getDefaultLocation() {
     const defaultLocation = LatLng(6.9271, 79.8612); // Colombo, Sri Lanka
@@ -349,8 +786,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     return _getDefaultLocation();
   }
 
-  // Create ride routes
-  // Updated createRideRoutes method
   void _createRideRoutes() async {
     final locationProvider = Provider.of<LocationProvider>(
       context,
@@ -367,42 +802,33 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         currentLocation['longitude'],
       );
 
-      // Clear existing markers and polylines
       setState(() {
         _markers.clear();
         _polylines.clear();
       });
 
-      // Add driver marker
       _markers.add(MapService.createCurrentLocationMarker(driverLocation));
-
-      // Add pickup marker
       _markers.add(
         MapService.createPickupMarker(
-          rideRequest.pickupLocation,
+          rideRequest.pickupLocation as LatLng,
           rideRequest.pickupAddress,
         ),
       );
-
-      // Add destination marker
       _markers.add(
         MapService.createDropMarker(
-          rideRequest.destinationLocation,
+          rideRequest.destinationLocation as LatLng,
           rideRequest.destinationAddress,
         ),
       );
 
-      // Create route from driver to pickup
       final driverToPickupRoute = await MapService.createDriverToPickupRoute(
         driverLocation,
-        rideRequest.pickupLocation,
+        rideRequest.pickupLocation as LatLng,
       );
-
-      // Create route from pickup to destination
       final pickupToDestinationRoute =
           await MapService.createPickupToDestinationRoute(
-            rideRequest.pickupLocation,
-            rideRequest.destinationLocation,
+            rideRequest.pickupLocation as LatLng,
+            rideRequest.destinationLocation as LatLng,
           );
 
       if (mounted) {
@@ -415,14 +841,13 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
           }
         });
 
-        // Animate to show all locations with proper error handling
         try {
           final GoogleMapController controller =
               await _mapControllerCompleter.future;
           final bounds = MapService.calculateRideBounds(
             driverLocation,
-            rideRequest.pickupLocation,
-            rideRequest.destinationLocation,
+            rideRequest.pickupLocation as LatLng,
+            rideRequest.destinationLocation as LatLng,
           );
           await MapService.animateToBounds(controller, bounds, padding: 150);
         } catch (e) {
@@ -432,7 +857,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     }
   }
 
-  // Rider pickup
   void _navigateToPickup() async {
     final rideProvider = Provider.of<RideProvider>(context, listen: false);
     final rideRequest = rideProvider.currentRideRequest;
@@ -450,8 +874,21 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   }
 
   void _showTestRideRequest() {
+    final driverProvider = Provider.of<DriverProvider>(context, listen: false);
+    if (!driverProvider.isOnline) {
+      SnackbarHelper.showErrorSnackBar(
+        context,
+        'You must be online to receive ride requests.',
+      );
+      return;
+    }
     final rideRequest = RideRequestService().generateDummyRideRequest();
-    RideRequestService().showRideRequest(context, rideRequest);
+    RideRequestService().showRideRequest(
+      context,
+      rideRequest,
+      () => _handleAcceptRide(rideRequest),
+      () => _handleDeclineRide(rideRequest),
+    );
   }
 
   @override
@@ -459,8 +896,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     return AnnotatedRegion(
       value: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light, // White icons
-        statusBarBrightness: Brightness.dark, // For iOS
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
       ),
       child: Scaffold(
         key: _scaffoldKey,
@@ -482,13 +919,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                     )
                     : null;
 
-            // Listen to ride provider changes
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (rideProvider.isRideAccepted) {
-                _createRideRoutes();
-              }
-            });
-
             return Stack(
               children: [
                 // Google Map
@@ -498,12 +928,11 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                       onMapCreated: _onMapCreated,
                       initialCameraPosition: CameraPosition(
                         target: _getInitialCameraPosition(),
-                        zoom: 14.0, // Zoom in for more street-level detail
+                        zoom: 14.0,
                       ),
                       markers: _markers,
                       polylines: _polylines,
-                      myLocationEnabled:
-                          true, // Disable default location dot since we have custom marker
+                      myLocationEnabled: true,
                       myLocationButtonEnabled: false,
                       mapType: MapType.normal,
                       zoomControlsEnabled: false,
@@ -513,7 +942,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                       tiltGesturesEnabled: true,
                       zoomGesturesEnabled: true,
                       mapToolbarEnabled: false,
-                      trafficEnabled: false, // Can be enabled if needed
+                      trafficEnabled: false,
                     ),
 
                 // Top overlay with search and menu
@@ -537,46 +966,38 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                         padding: const EdgeInsets.all(
                           AppDimensions.pageHorizontalPadding,
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Row(
                           children: [
-                            Row(
-                              children: [
-                                // Menu button
-                                GestureDetector(
-                                  onTap:
-                                      () =>
-                                          _scaffoldKey.currentState
-                                              ?.openDrawer(),
-                                  child: Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.white,
-                                      borderRadius: BorderRadius.circular(12),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withOpacity(0.1),
-                                          blurRadius: 8,
-                                          offset: const Offset(0, 2),
-                                        ),
-                                      ],
+                            GestureDetector(
+                              onTap:
+                                  () => _scaffoldKey.currentState?.openDrawer(),
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: AppColors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.1),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
                                     ),
-                                    child: const Icon(
-                                      Icons.menu,
-                                      color: AppColors.textPrimary,
-                                      size: 24,
-                                    ),
-                                  ),
+                                  ],
                                 ),
-                                const SizedBox(width: 16),
-                                // Search bar
-                                Expanded(
-                                  child: LocationSearchWidget(
-                                    onLocationSelected: _onLocationSelected,
-                                    currentUserLocation: currentUserPosition,
-                                  ),
+                                child: const Icon(
+                                  Icons.menu,
+                                  color: AppColors.textPrimary,
+                                  size: 24,
                                 ),
-                              ],
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: LocationSearchWidget(
+                                onLocationSelected: _onLocationSelected,
+                                currentUserLocation: currentUserPosition,
+                                onClear: _clearSearchRoutes,
+                              ),
                             ),
                           ],
                         ),
@@ -599,27 +1020,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                     ),
                   ),
                 ),
-
-                // Ride action buttons (shown when ride is accepted)
-                if (rideProvider.isRideAccepted)
-                  Positioned(
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    child: RideActionButtons(
-                      rideRequest: rideProvider.currentRideRequest!,
-                      onNavigate: _navigateToPickup,
-                      onArrived: () => rideProvider.arriveAtPickup(),
-                      onStartRide: () => rideProvider.startRide(),
-                      onCompleteRide: () => rideProvider.completeRide(),
-                      isEnRouteToPickup:
-                          rideProvider.rideStatus == RideStatus.enRouteToPickup,
-                      isAtPickup:
-                          rideProvider.rideStatus == RideStatus.arrivedAtPickup,
-                      isRideStarted:
-                          rideProvider.rideStatus == RideStatus.rideStarted,
-                    ),
-                  ),
 
                 // Navigate button (shows when destination is selected)
                 if (_selectedDestination != null)
@@ -646,28 +1046,19 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                     ),
                   ),
 
-                // // Driver status widget (top right)
-                // Positioned(
-                //   top: MediaQuery.of(context).padding.top + 80,
-                //   right: AppDimensions.pageHorizontalPadding,
-                //   child: DriverStatusWidget(
-                //     isOnline: driverProvider.isOnline,
-                //     onTap: _showEarningsBottomSheet,
-                //   ),
-                // ),
-
-                // Go online/offline button (bottom center)
-                Positioned(
-                  bottom: 100,
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: SlidingGoButton(
-                      isOnline: driverProvider.isOnline,
-                      onToggle: _toggleOnlineStatus,
+                // "Go Online" button - only shown when offline and not in a ride
+                if (!driverProvider.isOnline && !rideProvider.isRideAccepted)
+                  Positioned(
+                    bottom: 100,
+                    left: 0,
+                    right: 0,
+                    child: Center(
+                      child: SlidingGoButton(
+                        isOnline: driverProvider.isOnline,
+                        onToggle: _toggleOnlineStatus,
+                      ),
                     ),
                   ),
-                ),
 
                 // Current location button
                 Positioned(
@@ -697,6 +1088,28 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                       },
                     ),
                   ),
+
+                // Ride action buttons (shown when ride is accepted)
+                // Placed here to be on top of the map but below the online sheet
+                if (rideProvider.isRideAccepted)
+                  RiderDetailsBottomSheet(
+                    rideRequest: rideProvider.currentRideRequest!,
+                    onNavigate: _navigateToPickup,
+                    onArrived: () => rideProvider.arriveAtPickup(),
+                    onStartRide: () => rideProvider.startRide(),
+                    onCompleteRide: () => rideProvider.completeRide(),
+                    isEnRouteToPickup:
+                        rideProvider.rideStatus == RideStatus.enRouteToPickup,
+                    isAtPickup:
+                        rideProvider.rideStatus == RideStatus.arrivedAtPickup,
+                    isRideStarted:
+                        rideProvider.rideStatus == RideStatus.rideStarted,
+                  ),
+                if (driverProvider.isOnline && !rideProvider.isRideAccepted)
+                  OnlineDriverBottomSheet(
+                    controller: _onlineSheetController,
+                    onToggleOnlineStatus: _toggleOnlineStatus,
+                  ),
               ],
             );
           },
@@ -713,71 +1126,5 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         destinationName: _selectedDestination,
       );
     }
-  }
-}
-
-// Go Online Bottom Sheet
-class GoOnlineBottomSheet extends StatelessWidget {
-  const GoOnlineBottomSheet({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
-        ),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 40,
-            height: 4,
-            margin: const EdgeInsets.only(top: 12, bottom: 20),
-            decoration: BoxDecoration(
-              color: AppColors.lightGrey,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppDimensions.pageHorizontalPadding,
-            ),
-            child: Column(
-              children: [
-                const Icon(
-                  Icons.check_circle,
-                  color: AppColors.success,
-                  size: 64,
-                ),
-                const SizedBox(height: 16),
-                Text('You\'re now online!', style: AppTextStyles.heading2),
-                const SizedBox(height: 8),
-                Text(
-                  'You\'ll start receiving ride requests from nearby passengers.',
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 32),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: AppButtonStyles.primaryButton,
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Got it'),
-                  ),
-                ),
-                const SizedBox(height: 32),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }

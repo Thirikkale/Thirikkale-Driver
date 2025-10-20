@@ -18,6 +18,9 @@ class CustomInputFieldLabel extends StatefulWidget {
   final TimeOfDay? initialTime;
   final String? Function(String?)? validator;
   final FocusNode? focusNode;
+  final String? hintText;
+  final bool enabled;
+  final BorderRadius? borderRadius;
 
   const CustomInputFieldLabel({
     super.key,
@@ -37,6 +40,9 @@ class CustomInputFieldLabel extends StatefulWidget {
     this.initialTime,
     this.validator,
     this.focusNode,
+    this.hintText,
+    this.enabled = true,
+    this.borderRadius,
   });
 
   @override
@@ -150,11 +156,11 @@ class _CustomInputFieldLabelState extends State<CustomInputFieldLabel> {
       keyboardType: widget.keyboardType,
       cursorColor: AppColors.primaryBlue,
       minLines: isMultiline ? (widget.minLines ?? 3) : null,
-      maxLines:
-          isMultiline ? (widget.maxLines ?? 6) : (widget.maxLines ?? 1),
+      maxLines: isMultiline ? (widget.maxLines ?? 6) : (widget.maxLines ?? 1),
       readOnly: widget.isDateField || widget.isTimeField,
       validator: widget.validator,
       onChanged: widget.onChanged,
+      enabled: widget.enabled,
       onTap:
           widget.isDateField
               ? _selectDate
@@ -167,8 +173,7 @@ class _CustomInputFieldLabelState extends State<CustomInputFieldLabel> {
         labelText: widget.label,
         labelStyle: const TextStyle(color: AppColors.grey),
         floatingLabelStyle: const TextStyle(color: AppColors.primaryBlue),
-        prefixIcon:
-            widget.prefixIcon != null ? Icon(widget.prefixIcon) : null,
+        prefixIcon: widget.prefixIcon != null ? Icon(widget.prefixIcon) : null,
         suffixIcon:
             widget.isDateField
                 ? Icon(Icons.calendar_today, color: AppColors.primaryBlue)
@@ -176,29 +181,35 @@ class _CustomInputFieldLabelState extends State<CustomInputFieldLabel> {
                 ? Icon(Icons.access_time, color: AppColors.primaryBlue)
                 : null,
         hintText:
-            widget.isDateField
+            widget.hintText ??
+            (widget.isDateField
                 ? 'Select date'
                 : widget.isTimeField
                 ? 'Select time'
-                : 'Enter ${widget.label.toLowerCase()}',
+                : 'Enter ${widget.label.toLowerCase()}'),
         hintStyle: const TextStyle(color: AppColors.grey),
-        border: const OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(16)),
+        border: OutlineInputBorder(
+          borderRadius:
+              widget.borderRadius ?? BorderRadius.all(Radius.circular(16)),
         ),
-        focusedBorder: const OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(16)),
+        focusedBorder: OutlineInputBorder(
+          borderRadius:
+              widget.borderRadius ?? BorderRadius.all(Radius.circular(16)),
           borderSide: BorderSide(color: AppColors.primaryBlue, width: 2),
         ),
-        enabledBorder: const OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(16)),
+        enabledBorder: OutlineInputBorder(
+          borderRadius:
+              widget.borderRadius ?? BorderRadius.all(Radius.circular(16)),
           borderSide: BorderSide(color: Colors.grey, width: 1),
         ),
-        errorBorder: const OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(16)),
+        errorBorder: OutlineInputBorder(
+          borderRadius:
+              widget.borderRadius ?? BorderRadius.all(Radius.circular(16)),
           borderSide: BorderSide(color: AppColors.error, width: 1),
         ),
-        focusedErrorBorder: const OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(16)),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius:
+              widget.borderRadius ?? BorderRadius.all(Radius.circular(16)),
           borderSide: BorderSide(color: AppColors.error, width: 2),
         ),
       ),

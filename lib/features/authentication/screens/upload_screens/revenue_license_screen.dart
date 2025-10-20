@@ -8,7 +8,9 @@ import 'package:thirikkale_driver/features/authentication/widgets/upload_screen_
 import 'package:thirikkale_driver/widgets/common/custom_appbar.dart';
 
 class RevenueLicenseScreen extends StatefulWidget {
-  const RevenueLicenseScreen({super.key});
+  final String vehicleId;
+
+  const RevenueLicenseScreen({super.key, required this.vehicleId});
 
   @override
   State<RevenueLicenseScreen> createState() => _RevenueLicenseScreenState();
@@ -19,7 +21,10 @@ class _RevenueLicenseScreenState extends State<RevenueLicenseScreen> {
     final result = await Navigator.of(context).push<bool>(
       NoAnimationPageRoute(
         builder:
-            (context) => const CameraScreen(documentType: 'revenue_license'),
+            (context) => CameraScreen(
+              documentType: 'revenue_license',
+              vehicleId: widget.vehicleId,
+            ),
       ),
     );
 
