@@ -140,6 +140,10 @@ class ApiConfig {
   }) =>
       '$schedulingServiceBaseUrl/scheduled-rides/nearby?latitude=$latitude&longitude=$longitude&radiusKm=$radiusKm';
 
+  // Get accepted rides for a specific driver (no location restriction)
+  static String getDriverAcceptedRides(String driverId) =>
+      '$schedulingServiceBaseUrl/scheduled-rides/driver/$driverId';
+
   static String getNearbyDropoffRides({
     required double latitude,
     required double longitude,
@@ -158,6 +162,9 @@ class ApiConfig {
 
   static String removeDriverFromScheduledRide(String rideId) =>
       '$schedulingServiceBaseUrl/scheduled-rides/$rideId/remove-driver';
+
+  static String updateScheduledRideStatus(String rideId) =>
+      '$schedulingServiceBaseUrl/scheduled-rides/$rideId/status';
 
   // Card details (user-service)
   static String getDriverCard(String driverId) =>

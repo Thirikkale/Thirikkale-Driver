@@ -51,47 +51,53 @@ class ScheduledRidesProvider extends ChangeNotifier {
     _nearbyError = null;
     notifyListeners();
     try {
-      final rides = await _service.getNearbyRides(
-        latitude: locationProvider.currentLatitude!,
-        longitude: locationProvider.currentLongitude!,
-        radiusKm: radiusKm,
-      );
-      _nearby
-        ..clear()
-        ..addAll(rides);
-    } catch (e) {
-      _nearbyError = e.toString();
-    } finally {
-      _loadingNearby = false;
-      notifyListeners();
-    }
-  }
-
-  // Fetch accepted rides by fetching nearby and filtering for current driverId
-  Future<void> fetchAccepted(LocationProvider locationProvider, String driverId, {double radiusKm = 25}) async {
-    if (locationProvider.currentLatitude == null || locationProvider.currentLongitude == null) {
-      _acceptedError = 'Current location unavailable';
-      notifyListeners();
-      return;
-    }
-    _loadingAccepted = true;
-    _acceptedError = null;
-    notifyListeners();
-    try {
-      // Fetch all nearby rides (including assigned ones)
       final allRides = await _service.getNearbyRides(
         latitude: locationProvider.currentLatitude!,
         longitude: locationProvider.currentLongitude!,
         radiusKm: radiusKm,
       );
       
-      // Filter for rides assigned to this driver
-      final filtered = allRides.where((r) => r.driverId == driverId).toList();
-      print('📋 Found ${filtered.length} accepted rides for driver $driverId out of ${allRides.length} total rides');
+      // Filter out rides that already have a driver assigned
+      final availableRides = allRides.where((ride) => 
+        ride.driverId == null || ride.driverId!.isEmpty
+      ).toList();
+      
+      print('📍 Nearby rides: ${availableRides.length} available out of ${allRides.length} total (${allRides.length - availableRides.length} already assigned)');
+      
+      _nearby
+        ..clear()
+        ..addAll(availableRides);
+    } catch (e) {
+      _nearbyError = e.toString();
+      print('❌ Error fetching nearby rides: $e');
+    } finally {
+      _loadingNearby = false;
+      notifyListeners();
+    }
+  }
+
+  // Fetch accepted rides for a specific driver (no location restriction)
+  Future<void> fetchAccepted(String driverId) async {
+    print('🔄 fetchAccepted called with driverId: $driverId');
+    
+    _loadingAccepted = true;
+    _acceptedError = null;
+    notifyListeners();
+    
+    try {
+      // Fetch rides accepted by this driver from anywhere
+      final acceptedRides = await _service.getDriverAcceptedRides(driverId);
+      
+      print('📦 Received ${acceptedRides.length} accepted rides for driver "$driverId"');
+      
+      // Debug: Print all rides
+      for (var i = 0; i < acceptedRides.length; i++) {
+        print('  Ride $i: id=${acceptedRides[i].id}, pickup=${acceptedRides[i].pickupAddress}');
+      }
       
       _accepted
         ..clear()
-        ..addAll(filtered);
+        ..addAll(acceptedRides);
     } catch (e) {
       _acceptedError = e.toString();
       print('❌ Error fetching accepted rides: $e');
@@ -114,7 +120,7 @@ class ScheduledRidesProvider extends ChangeNotifier {
     _routeError = null;
     notifyListeners();
     try {
-      final rides = await _service.routeMatch(
+      final allRides = await _service.routeMatch(
         pickupLatitude: pickupLat,
         pickupLongitude: pickupLng,
         dropoffLatitude: dropLat,
@@ -122,11 +128,20 @@ class ScheduledRidesProvider extends ChangeNotifier {
         pickupRadiusKm: pickupRadiusKm,
         dropoffRadiusKm: dropoffRadiusKm,
       );
+      
+      // Filter out rides that already have a driver assigned
+      final availableRides = allRides.where((ride) => 
+        ride.driverId == null || ride.driverId!.isEmpty
+      ).toList();
+      
+      print('🔍 Route search: ${availableRides.length} available rides out of ${allRides.length} total (${allRides.length - availableRides.length} already assigned)');
+      
       _routeMatches
         ..clear()
-        ..addAll(rides);
+        ..addAll(availableRides);
     } catch (e) {
       _routeError = e.toString();
+      print('❌ Error in route search: $e');
     } finally {
       _loadingRoute = false;
       notifyListeners();
@@ -191,5 +206,79 @@ class ScheduledRidesProvider extends ChangeNotifier {
       notifyListeners();
     }
     return ok;
+  }
+
+  // Start trip - update status to ONGOING
+  Future<bool> startTrip({required String rideId}) async {
+    try {
+      print('🚗 Starting trip for ride: $rideId');
+      final res = await _service.updateRideStatus(
+        rideId: rideId,
+        status: 'ONGOING',
+      );
+      final ok = res['success'] == true;
+      
+      if (ok) {
+        print('✅ Trip started successfully');
+        // Update the ride status in local state
+        final rideIndex = _accepted.indexWhere((r) => r.id == rideId);
+        if (rideIndex != -1) {
+          final ride = _accepted[rideIndex];
+          final updatedRide = ScheduledRide(
+            id: ride.id,
+            riderId: ride.riderId,
+            driverId: ride.driverId,
+            pickupLatitude: ride.pickupLatitude,
+            pickupLongitude: ride.pickupLongitude,
+            pickupAddress: ride.pickupAddress,
+            dropoffLatitude: ride.dropoffLatitude,
+            dropoffLongitude: ride.dropoffLongitude,
+            dropoffAddress: ride.dropoffAddress,
+            scheduledTime: ride.scheduledTime,
+            status: 'ONGOING', // Update status
+            passengers: ride.passengers,
+            vehicleType: ride.vehicleType,
+            rideType: ride.rideType,
+            isSharedRide: ride.isSharedRide,
+            maxFare: ride.maxFare,
+            distanceKm: ride.distanceKm,
+            isWomenOnly: ride.isWomenOnly,
+          );
+          _accepted[rideIndex] = updatedRide;
+          notifyListeners();
+        }
+      } else {
+        print('❌ Failed to start trip');
+      }
+      return ok;
+    } catch (e) {
+      print('❌ Error starting trip: $e');
+      return false;
+    }
+  }
+
+  // End trip - update status to COMPLETED
+  Future<bool> endTrip({required String rideId}) async {
+    try {
+      print('🏁 Ending trip for ride: $rideId');
+      final res = await _service.updateRideStatus(
+        rideId: rideId,
+        status: 'COMPLETED',
+      );
+      final ok = res['success'] == true;
+      
+      if (ok) {
+        print('✅ Trip ended successfully');
+        // Remove from accepted rides list as it's now completed
+        _accepted.removeWhere((r) => r.id == rideId);
+        notifyListeners();
+      } else {
+        print('❌ Failed to end trip');
+      }
+      return ok;
+    } catch (e) {
+      print('❌ Error ending trip: $e');
+      return false;
+    }
   }
 }

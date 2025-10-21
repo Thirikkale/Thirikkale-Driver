@@ -4,9 +4,12 @@ import 'package:provider/provider.dart';
 import 'package:thirikkale_driver/core/provider/auth_provider.dart';
 import 'package:thirikkale_driver/core/provider/location_provider.dart';
 import 'package:thirikkale_driver/core/provider/scheduled_rides_provider.dart';
+import 'package:thirikkale_driver/core/services/scheduled_rides_service.dart';
 import 'package:thirikkale_driver/core/utils/app_styles.dart';
 import 'package:thirikkale_driver/core/utils/snackbar_helper.dart';
 import 'package:thirikkale_driver/features/home/widgets/location_search_widget.dart';
+import 'package:thirikkale_driver/features/scheduled_rides/models/card_models.dart';
+import 'package:thirikkale_driver/features/scheduled_rides/models/scheduled_ride.dart';
 import 'package:thirikkale_driver/features/scheduled_rides/widgets/scheduled_ride_card.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -39,15 +42,22 @@ class _ScheduledRidesViewState extends State<_ScheduledRidesView> with SingleTic
     _tabController.addListener(() {
       if (_tabController.indexIsChanging) return;
       context.read<ScheduledRidesProvider>().setTab(_tabController.index);
+      
+      print('📑 Tab changed to index: ${_tabController.index}');
+      
       if (_tabController.index == 1) {
+        // Nearby tab
         final loc = context.read<LocationProvider>();
         context.read<ScheduledRidesProvider>().fetchNearby(loc);
       } else if (_tabController.index == 0) {
-        final loc = context.read<LocationProvider>();
+        // Accepted tab
         final auth = context.read<AuthProvider>();
         final driverId = auth.driverId;
+        print('   Fetching accepted rides for driverId: $driverId');
         if (driverId != null) {
-          context.read<ScheduledRidesProvider>().fetchAccepted(loc, driverId);
+          context.read<ScheduledRidesProvider>().fetchAccepted(driverId);
+        } else {
+          print('⚠️ Warning: driverId is null on tab 0');
         }
       }
     });
@@ -56,9 +66,16 @@ class _ScheduledRidesViewState extends State<_ScheduledRidesView> with SingleTic
       final loc = context.read<LocationProvider>();
       final auth = context.read<AuthProvider>();
       final driverId = auth.driverId;
+      
+      print('🚀 ScheduledRidesScreen initializing...');
+      print('   driverId: $driverId');
+      print('   location: lat=${loc.currentLatitude}, lng=${loc.currentLongitude}');
+      
       context.read<ScheduledRidesProvider>().fetchNearby(loc);
       if (driverId != null) {
-        context.read<ScheduledRidesProvider>().fetchAccepted(loc, driverId);
+        context.read<ScheduledRidesProvider>().fetchAccepted(driverId);
+      } else {
+        print('⚠️ Warning: driverId is null, cannot fetch accepted rides');
       }
     });
   }
@@ -96,8 +113,15 @@ class _ScheduledRidesViewState extends State<_ScheduledRidesView> with SingleTic
   }
 }
 
-class _AcceptedTab extends StatelessWidget {
+class _AcceptedTab extends StatefulWidget {
   const _AcceptedTab();
+
+  @override
+  State<_AcceptedTab> createState() => _AcceptedTabState();
+}
+
+class _AcceptedTabState extends State<_AcceptedTab> {
+  final Map<String, RiderCardModel> _riderDetailsCache = {};
 
   @override
   Widget build(BuildContext context) {
@@ -117,10 +141,25 @@ class _AcceptedTab extends StatelessWidget {
           padding: const EdgeInsets.all(20),
           itemCount: items.length,
           separatorBuilder: (_, __) => const SizedBox(height: 16),
-          itemBuilder: (_, i) => ScheduledRideCard(
+          itemBuilder: (_, i) => _RideCardWithRiderDetails(
             ride: items[i],
-            showNavigateButton: true,
-            showUnassignButton: true,
+            riderDetailsCache: _riderDetailsCache,
+            onStartTrip: () async {
+              final ok = await provider.startTrip(rideId: items[i].id);
+              if (context.mounted) {
+                if (ok) {
+                  SnackbarHelper.showSuccessSnackBar(context, 'Trip started! Navigating to destination...');
+                  // Navigate to destination using Google Maps
+                  _launchGoogleMaps(
+                    items[i].dropoffLatitude,
+                    items[i].dropoffLongitude,
+                    items[i].dropoffAddress,
+                  );
+                } else {
+                  SnackbarHelper.showErrorSnackBar(context, 'Failed to start trip');
+                }
+              }
+            },
             onNavigate: () => _launchGoogleMaps(
               items[i].pickupLatitude,
               items[i].pickupLongitude,
@@ -476,3 +515,109 @@ Future<void> _launchGoogleMaps(double lat, double lng, String address) async {
   }
 }
 
+// Widget that fetches and displays rider details for a ride
+class _RideCardWithRiderDetails extends StatefulWidget {
+  final ScheduledRide ride;
+  final Map<String, RiderCardModel> riderDetailsCache;
+  final VoidCallback onNavigate;
+  final VoidCallback onStartTrip;
+  final VoidCallback onUnassign;
+
+  const _RideCardWithRiderDetails({
+    required this.ride,
+    required this.riderDetailsCache,
+    required this.onNavigate,
+    required this.onStartTrip,
+    required this.onUnassign,
+  });
+
+  @override
+  State<_RideCardWithRiderDetails> createState() => _RideCardWithRiderDetailsState();
+}
+
+class _RideCardWithRiderDetailsState extends State<_RideCardWithRiderDetails> {
+  RiderCardModel? _riderDetails;
+  bool _loadingRider = false;
+  String? _riderError;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchRiderDetails();
+  }
+
+  Future<void> _fetchRiderDetails() async {
+    // Check cache first
+    if (widget.riderDetailsCache.containsKey(widget.ride.riderId)) {
+      setState(() {
+        _riderDetails = widget.riderDetailsCache[widget.ride.riderId];
+      });
+      return;
+    }
+
+    setState(() {
+      _loadingRider = true;
+      _riderError = null;
+    });
+
+    try {
+      final service = ScheduledRidesService();
+      final details = await service.getRiderCard(widget.ride.riderId);
+      
+      // Cache it
+      widget.riderDetailsCache[widget.ride.riderId] = details;
+      
+      if (mounted) {
+        setState(() {
+          _riderDetails = details;
+          _loadingRider = false;
+        });
+      }
+    } catch (e) {
+      print('❌ Error fetching rider details: $e');
+      if (mounted) {
+        setState(() {
+          _riderError = 'Failed to load rider details';
+          _loadingRider = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final rideStatus = widget.ride.status.toUpperCase();
+    
+    // Show Start Trip button only if ride status is SCHEDULED
+    final showStartTrip = rideStatus == 'SCHEDULED';
+    
+    // Show End Trip button only if ride status is ONGOING
+    final showEndTrip = rideStatus == 'ONGOING';
+    
+    // Show Cancel button only if ride is not ongoing (can cancel before starting)
+    final showCancel = rideStatus != 'ONGOING';
+    
+    return ScheduledRideCard(
+      ride: widget.ride,
+      showNavigateButton: true,
+      showStartTripButton: showStartTrip,
+      showEndTripButton: showEndTrip,
+      showUnassignButton: showCancel,
+      riderDetails: _riderDetails,
+      onNavigate: widget.onNavigate,
+      onStartTrip: widget.onStartTrip,
+      onEndTrip: () async {
+        final provider = context.read<ScheduledRidesProvider>();
+        final ok = await provider.endTrip(rideId: widget.ride.id);
+        if (context.mounted) {
+          if (ok) {
+            SnackbarHelper.showSuccessSnackBar(context, 'Trip completed successfully!');
+          } else {
+            SnackbarHelper.showErrorSnackBar(context, 'Failed to end trip');
+          }
+        }
+      },
+      onUnassign: widget.onUnassign,
+    );
+  }
+}

@@ -37,6 +37,30 @@ class ScheduledRidesService {
     }
   }
 
+  // Get accepted rides for a specific driver (no location limit)
+  Future<List<ScheduledRide>> getDriverAcceptedRides(String driverId) async {
+    try {
+      final url = ApiConfig.getDriverAcceptedRides(driverId);
+      print('🔍 Fetching accepted rides for driver $driverId from: $url');
+      
+      final resp = await http
+          .get(Uri.parse(url))
+          .timeout(ApiConfig.connectTimeout);
+          
+      print('📥 Response status: ${resp.statusCode}');
+      
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        final List data = jsonDecode(resp.body) as List;
+        print('✅ Found ${data.length} accepted rides for driver');
+        return data.map((e) => ScheduledRide.fromJson(e)).toList();
+      }
+      throw Exception('Failed to load accepted rides (${resp.statusCode})');
+    } catch (e) {
+      print('❌ Error fetching accepted rides: $e');
+      rethrow;
+    }
+  }
+
   Future<List<ScheduledRide>> routeMatch({
     required double pickupLatitude,
     required double pickupLongitude,
@@ -154,6 +178,41 @@ class ScheduledRidesService {
       'data': body,
       'success': resp.statusCode >= 200 && resp.statusCode < 300,
     };
+  }
+
+  Future<Map<String, dynamic>> updateRideStatus({
+    required String rideId,
+    required String status,
+  }) async {
+    try {
+      final url = ApiConfig.updateScheduledRideStatus(rideId);
+      print('🌐 Updating ride status - PUT: $url');
+      print('📝 Status: $status');
+      
+      final resp = await http.put(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'status': status}),
+      ).timeout(const Duration(seconds: 45));
+      
+      print('📡 Update status response: ${resp.statusCode}');
+      print('📡 Response body: ${resp.body}');
+      
+      final Map<String, dynamic> body =
+          resp.body.isNotEmpty ? jsonDecode(resp.body) : {};
+      return {
+        'statusCode': resp.statusCode,
+        'data': body,
+        'success': resp.statusCode >= 200 && resp.statusCode < 300,
+      };
+    } catch (e) {
+      print('❌ Error updating ride status: $e');
+      return {
+        'statusCode': 500,
+        'data': {'error': e.toString()},
+        'success': false,
+      };
+    }
   }
 
   Future<DriverCardModel> getDriverCard(String driverId) async {

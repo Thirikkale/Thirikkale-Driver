@@ -1,26 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:thirikkale_driver/core/utils/app_styles.dart';
+import 'package:thirikkale_driver/features/scheduled_rides/models/card_models.dart';
 import 'package:thirikkale_driver/features/scheduled_rides/models/scheduled_ride.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ScheduledRideCard extends StatelessWidget {
   final ScheduledRide ride;
+  final RiderCardModel? riderDetails;
   final bool showAssignButton;
   final bool showUnassignButton;
   final bool showNavigateButton;
+  final bool showStartTripButton;
+  final bool showEndTripButton;
   final VoidCallback? onAssign;
   final VoidCallback? onUnassign;
   final VoidCallback? onNavigate;
+  final VoidCallback? onStartTrip;
+  final VoidCallback? onEndTrip;
   final VoidCallback? onTap;
 
   const ScheduledRideCard({
     super.key,
     required this.ride,
+    this.riderDetails,
     this.showAssignButton = false,
     this.showUnassignButton = false,
     this.showNavigateButton = false,
+    this.showStartTripButton = false,
+    this.showEndTripButton = false,
     this.onAssign,
     this.onUnassign,
     this.onNavigate,
+    this.onStartTrip,
+    this.onEndTrip,
     this.onTap,
   });
 
@@ -73,6 +85,13 @@ class ScheduledRideCard extends StatelessWidget {
                   _buildStatusBadge(),
                 ],
               ),
+              
+              // Rider details section (only show if riderDetails available)
+              if (riderDetails != null) ...[
+                const SizedBox(height: 16),
+                _buildRiderDetailsSection(),
+              ],
+              
               const SizedBox(height: 16),
               
               // Pickup location
@@ -112,7 +131,7 @@ class ScheduledRideCard extends StatelessWidget {
               ],
               
               // Action buttons
-              if (showAssignButton || showUnassignButton || showNavigateButton) ...[
+              if (showAssignButton || showUnassignButton || showNavigateButton || showStartTripButton || showEndTripButton) ...[
                 const SizedBox(height: 16),
                 _buildActionButtons(context),
               ],
@@ -217,6 +236,129 @@ class ScheduledRideCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Widget _buildRiderDetailsSection() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.primaryBlue.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppColors.primaryBlue.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          // Profile picture or avatar
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.primaryBlue.withOpacity(0.1),
+              image: riderDetails?.profilePicUrl != null
+                  ? DecorationImage(
+                      image: NetworkImage(riderDetails!.profilePicUrl!),
+                      fit: BoxFit.cover,
+                    )
+                  : null,
+            ),
+            child: riderDetails?.profilePicUrl == null
+                ? const Icon(
+                    Icons.person,
+                    size: 28,
+                    color: AppColors.primaryBlue,
+                  )
+                : null,
+          ),
+          const SizedBox(width: 12),
+          
+          // Rider info
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.person_outline,
+                      size: 16,
+                      color: AppColors.primaryBlue,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Rider',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  riderDetails?.name ?? 'Loading...',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.black,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (riderDetails?.contactNumber != null) ...[
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.phone,
+                        size: 14,
+                        color: AppColors.textSecondary,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        riderDetails!.contactNumber,
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+          
+          // Call button
+          if (riderDetails?.contactNumber != null)
+            IconButton(
+              onPressed: () => _makePhoneCall(riderDetails!.contactNumber),
+              icon: const Icon(Icons.phone, color: AppColors.success),
+              style: IconButton.styleFrom(
+                backgroundColor: AppColors.success.withOpacity(0.1),
+                padding: const EdgeInsets.all(8),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _makePhoneCall(String phoneNumber) async {
+    // Remove any spaces, dashes, or formatting from the phone number
+    final cleanNumber = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
+    final telUri = Uri(scheme: 'tel', path: cleanNumber);
+    
+    try {
+      if (await canLaunchUrl(telUri)) {
+        await launchUrl(telUri);
+      } else {
+        print('❌ Cannot launch phone dialer for: $phoneNumber');
+      }
+    } catch (e) {
+      print('❌ Error launching phone dialer: $e');
+    }
   }
 
   Widget _buildLocationRow({
@@ -386,62 +528,124 @@ class ScheduledRideCard extends StatelessWidget {
   }
 
   Widget _buildActionButtons(BuildContext context) {
-    return Row(
-      children: [
-        if (showAssignButton)
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: onAssign,
-              icon: const Icon(Icons.check_circle_outline, size: 20),
-              label: const Text('Accept Ride'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.success,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
+    // Build list of buttons to display based on conditions
+    final List<Widget> buttons = [];
+    
+    // For Nearby tab: Accept button
+    if (showAssignButton) {
+      buttons.add(
+        Expanded(
+          child: ElevatedButton.icon(
+            onPressed: onAssign,
+            icon: const Icon(Icons.check_circle_outline, size: 20),
+            label: const Text('Accept Ride'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.success,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
               ),
             ),
           ),
-        if (showNavigateButton) ...[
-          if (showUnassignButton) const SizedBox(width: 12),
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: onNavigate,
-              icon: const Icon(Icons.navigation, size: 20),
-              label: const Text('Navigate'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryBlue,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
+        ),
+      );
+    }
+    
+    // For Accepted tab with SCHEDULED status: Start Trip button
+    if (showStartTripButton) {
+      buttons.add(
+        Expanded(
+          child: ElevatedButton.icon(
+            onPressed: onStartTrip,
+            icon: const Icon(Icons.play_arrow, size: 20),
+            label: const Text('Start Trip'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.success,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
               ),
             ),
           ),
-        ],
-        if (showUnassignButton) ...[
-          if (showNavigateButton) const SizedBox(width: 12),
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: onUnassign,
-              icon: const Icon(Icons.cancel_outlined, size: 20),
-              label: const Text('Cancel'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.error,
-                side: const BorderSide(color: AppColors.error),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
+        ),
+      );
+    }
+    
+    // For Accepted tab with ONGOING status: End Trip button
+    if (showEndTripButton) {
+      buttons.add(
+        Expanded(
+          child: ElevatedButton.icon(
+            onPressed: onEndTrip,
+            icon: const Icon(Icons.flag, size: 20),
+            label: const Text('End Trip'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
               ),
             ),
           ),
-        ],
-      ],
-    );
+        ),
+      );
+    }
+    
+    // Navigate button (available for accepted rides)
+    if (showNavigateButton) {
+      buttons.add(
+        Expanded(
+          child: ElevatedButton.icon(
+            onPressed: onNavigate,
+            icon: const Icon(Icons.navigation, size: 20),
+            label: const Text('Navigate'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryBlue,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+    
+    // Cancel button (only shown when ride is not ONGOING)
+    if (showUnassignButton) {
+      buttons.add(
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: onUnassign,
+            icon: const Icon(Icons.cancel_outlined, size: 20),
+            label: const Text('Cancel'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.error,
+              side: const BorderSide(color: AppColors.error),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+    
+    // Join buttons with spacing
+    final List<Widget> rowChildren = [];
+    for (int i = 0; i < buttons.length; i++) {
+      if (i > 0) {
+        rowChildren.add(const SizedBox(width: 12));
+      }
+      rowChildren.add(buttons[i]);
+    }
+    
+    return Row(children: rowChildren);
   }
 }
 
