@@ -5,6 +5,7 @@ import 'package:thirikkale_driver/core/provider/location_provider.dart';
 import 'package:thirikkale_driver/core/provider/scheduled_rides_provider.dart';
 import 'package:thirikkale_driver/core/utils/snackbar_helper.dart';
 import 'package:thirikkale_driver/features/scheduled_rides/widgets/scheduled_ride_card.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ScheduledRidesScreen extends StatelessWidget {
   const ScheduledRidesScreen({super.key});
@@ -115,7 +116,13 @@ class _AcceptedTab extends StatelessWidget {
           separatorBuilder: (_, __) => const SizedBox(height: 16),
           itemBuilder: (_, i) => ScheduledRideCard(
             ride: items[i],
+            showNavigateButton: true,
             showUnassignButton: true,
+            onNavigate: () => _launchGoogleMaps(
+              items[i].pickupLatitude,
+              items[i].pickupLongitude,
+              items[i].pickupAddress,
+            ),
             onUnassign: () async {
               final ok = await provider.removeDriver(rideId: items[i].id);
               if (context.mounted) {
@@ -328,4 +335,29 @@ class _RouteSearchTabState extends State<_RouteSearchTab> {
   }
 }
 
+// Helper function to launch Google Maps navigation
+Future<void> _launchGoogleMaps(double lat, double lng, String address) async {
+  final googleMapsUrl = Uri.parse(
+    'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng&destination_place_id=$address',
+  );
+  
+  // Try to open Google Maps app first, fallback to browser
+  final googleMapsAppUrl = Uri.parse('comgooglemaps://?daddr=$lat,$lng');
+  
+  try {
+    // Try Google Maps app first
+    if (await canLaunchUrl(googleMapsAppUrl)) {
+      await launchUrl(googleMapsAppUrl);
+    } else {
+      // Fallback to browser
+      if (await canLaunchUrl(googleMapsUrl)) {
+        await launchUrl(googleMapsUrl, mode: LaunchMode.externalApplication);
+      } else {
+        throw 'Could not launch Google Maps';
+      }
+    }
+  } catch (e) {
+    print('❌ Error launching Google Maps: $e');
+  }
+}
 

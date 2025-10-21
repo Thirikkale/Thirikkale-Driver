@@ -83,17 +83,27 @@ class ScheduledRidesService {
     required double longitude,
     required double radiusKm,
   }) async {
-    final url = ApiConfig.getNearbyDropoffRides(
-      latitude: latitude,
-      longitude: longitude,
-      radiusKm: radiusKm,
-    );
-    final resp = await http.get(Uri.parse(url));
-    if (resp.statusCode >= 200 && resp.statusCode < 300) {
-      final List data = jsonDecode(resp.body) as List;
-      return data.map((e) => ScheduledRide.fromJson(e)).toList();
+    try {
+      final url = ApiConfig.getNearbyDropoffRides(
+        latitude: latitude,
+        longitude: longitude,
+        radiusKm: radiusKm,
+      );
+      print('🔍 Fetching nearby dropoff rides from: $url');
+      
+      final resp = await http.get(Uri.parse(url)).timeout(ApiConfig.connectTimeout);
+      print('📥 Response status: ${resp.statusCode}');
+      
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        final List data = jsonDecode(resp.body) as List;
+        print('✅ Found ${data.length} nearby dropoff rides');
+        return data.map((e) => ScheduledRide.fromJson(e)).toList();
+      }
+      throw Exception('Failed to load nearby dropoff rides (${resp.statusCode})');
+    } catch (e) {
+      print('❌ Error fetching nearby dropoff rides: $e');
+      rethrow;
     }
-    throw Exception('Failed to load nearby dropoff rides (${resp.statusCode})');
   }
 
   Future<Map<String, dynamic>> assignDriver({
@@ -136,7 +146,7 @@ class ScheduledRidesService {
     required String rideId,
   }) async {
     final url = ApiConfig.removeDriverFromScheduledRide(rideId);
-    final resp = await http.post(Uri.parse(url));
+    final resp = await http.delete(Uri.parse(url));
     final Map<String, dynamic> body =
         resp.body.isNotEmpty ? jsonDecode(resp.body) : {};
     return {

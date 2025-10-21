@@ -6,8 +6,10 @@ class ScheduledRideCard extends StatelessWidget {
   final ScheduledRide ride;
   final bool showAssignButton;
   final bool showUnassignButton;
+  final bool showNavigateButton;
   final VoidCallback? onAssign;
   final VoidCallback? onUnassign;
+  final VoidCallback? onNavigate;
   final VoidCallback? onTap;
 
   const ScheduledRideCard({
@@ -15,8 +17,10 @@ class ScheduledRideCard extends StatelessWidget {
     required this.ride,
     this.showAssignButton = false,
     this.showUnassignButton = false,
+    this.showNavigateButton = false,
     this.onAssign,
     this.onUnassign,
+    this.onNavigate,
     this.onTap,
   });
 
@@ -108,7 +112,7 @@ class ScheduledRideCard extends StatelessWidget {
               ],
               
               // Action buttons
-              if (showAssignButton || showUnassignButton) ...[
+              if (showAssignButton || showUnassignButton || showNavigateButton) ...[
                 const SizedBox(height: 16),
                 _buildActionButtons(context),
               ],
@@ -400,12 +404,31 @@ class ScheduledRideCard extends StatelessWidget {
               ),
             ),
           ),
-        if (showUnassignButton)
+        if (showNavigateButton) ...[
+          if (showUnassignButton) const SizedBox(width: 12),
+          Expanded(
+            child: ElevatedButton.icon(
+              onPressed: onNavigate,
+              icon: const Icon(Icons.navigation, size: 20),
+              label: const Text('Navigate'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryBlue,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+          ),
+        ],
+        if (showUnassignButton) ...[
+          if (showNavigateButton) const SizedBox(width: 12),
           Expanded(
             child: OutlinedButton.icon(
               onPressed: onUnassign,
               icon: const Icon(Icons.cancel_outlined, size: 20),
-              label: const Text('Cancel Ride'),
+              label: const Text('Cancel'),
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.error,
                 side: const BorderSide(color: AppColors.error),
@@ -416,6 +439,7 @@ class ScheduledRideCard extends StatelessWidget {
               ),
             ),
           ),
+        ],
       ],
     );
   }

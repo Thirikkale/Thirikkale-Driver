@@ -67,22 +67,34 @@ class ScheduledRidesProvider extends ChangeNotifier {
     }
   }
 
-  // Fetch accepted rides by filtering nearby list for current driverId
+  // Fetch accepted rides by fetching nearby and filtering for current driverId
   Future<void> fetchAccepted(LocationProvider locationProvider, String driverId, {double radiusKm = 25}) async {
+    if (locationProvider.currentLatitude == null || locationProvider.currentLongitude == null) {
+      _acceptedError = 'Current location unavailable';
+      notifyListeners();
+      return;
+    }
     _loadingAccepted = true;
     _acceptedError = null;
     notifyListeners();
     try {
-      // Try to reuse nearby if already loaded, otherwise fetch
-      if (_nearby.isEmpty) {
-        await fetchNearby(locationProvider, radiusKm: radiusKm);
-      }
-      final filtered = _nearby.where((r) => r.driverId == driverId).toList();
+      // Fetch all nearby rides (including assigned ones)
+      final allRides = await _service.getNearbyRides(
+        latitude: locationProvider.currentLatitude!,
+        longitude: locationProvider.currentLongitude!,
+        radiusKm: radiusKm,
+      );
+      
+      // Filter for rides assigned to this driver
+      final filtered = allRides.where((r) => r.driverId == driverId).toList();
+      print('📋 Found ${filtered.length} accepted rides for driver $driverId out of ${allRides.length} total rides');
+      
       _accepted
         ..clear()
         ..addAll(filtered);
     } catch (e) {
       _acceptedError = e.toString();
+      print('❌ Error fetching accepted rides: $e');
     } finally {
       _loadingAccepted = false;
       notifyListeners();
