@@ -802,6 +802,12 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         currentLocation['longitude'],
       );
 
+      final pickupLatLng = LatLng(rideRequest.pickupLat, rideRequest.pickupLng);
+      final destinationLatLng = LatLng(
+        rideRequest.destinationLat,
+        rideRequest.destinationLng,
+      );
+
       setState(() {
         _markers.clear();
         _polylines.clear();
@@ -809,14 +815,11 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
 
       _markers.add(MapService.createCurrentLocationMarker(driverLocation));
       _markers.add(
-        MapService.createPickupMarker(
-          rideRequest.pickupLocation as LatLng,
-          rideRequest.pickupAddress,
-        ),
+        MapService.createPickupMarker(pickupLatLng, rideRequest.pickupAddress),
       );
       _markers.add(
         MapService.createDropMarker(
-          rideRequest.destinationLocation as LatLng,
+          destinationLatLng,
           rideRequest.destinationAddress,
         ),
       );
@@ -827,8 +830,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       );
       final pickupToDestinationRoute =
           await MapService.createPickupToDestinationRoute(
-            rideRequest.pickupLocation as LatLng,
-            rideRequest.destinationLocation as LatLng,
+            pickupLatLng, // ✅ Use variable
+            destinationLatLng,
           );
 
       if (mounted) {
@@ -846,8 +849,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
               await _mapControllerCompleter.future;
           final bounds = MapService.calculateRideBounds(
             driverLocation,
-            rideRequest.pickupLocation as LatLng,
-            rideRequest.destinationLocation as LatLng,
+            pickupLatLng, // ✅ Use variable
+            destinationLatLng,
           );
           await MapService.animateToBounds(controller, bounds, padding: 150);
         } catch (e) {
@@ -855,6 +858,27 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         }
       }
     }
+  }
+
+  // ✅ ADD THIS NEW METHOD
+  void _startRideAndNavigateToDropoff() {
+    final rideProvider = Provider.of<RideProvider>(context, listen: false);
+    final rideRequest = rideProvider.currentRideRequest;
+
+    if (rideRequest == null) return;
+
+    // 1. Tell the provider the ride is starting
+    rideProvider.startRide();
+
+    // 2. Launch navigation to the DESTINATION
+    print(
+      '🚀 Launching navigation to drop-off: ${rideRequest.destinationAddress}',
+    );
+    NavigationUtils.launchGoogleMapsNavigation(
+      destinationLat: rideRequest.destinationLat,
+      destinationLng: rideRequest.destinationLng,
+      destinationName: rideRequest.destinationAddress,
+    );
   }
 
   void _navigateToPickup() async {
@@ -1096,7 +1120,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                     rideRequest: rideProvider.currentRideRequest!,
                     onNavigate: _navigateToPickup,
                     onArrived: () => rideProvider.arriveAtPickup(),
-                    onStartRide: () => rideProvider.startRide(),
+                    onStartRide: _startRideAndNavigateToDropoff,
                     onCompleteRide: () => rideProvider.completeRide(),
                     isEnRouteToPickup:
                         rideProvider.rideStatus == RideStatus.enRouteToPickup,
