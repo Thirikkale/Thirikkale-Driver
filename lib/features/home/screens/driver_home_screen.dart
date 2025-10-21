@@ -860,15 +860,14 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     }
   }
 
-  // ✅ ADD THIS NEW METHOD
-  void _startRideAndNavigateToDropoff() {
+  Future<void> _startRideAndNavigateToDropoff(String driverId, String accessToken) async {
     final rideProvider = Provider.of<RideProvider>(context, listen: false);
     final rideRequest = rideProvider.currentRideRequest;
 
     if (rideRequest == null) return;
 
-    // 1. Tell the provider the ride is starting
-    rideProvider.startRide();
+    // 1. Tell the provider the ride is starting (which now calls the API)
+    rideProvider.startRide(driverId, accessToken);
 
     // 2. Launch navigation to the DESTINATION
     print(
@@ -1119,9 +1118,49 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                   RiderDetailsBottomSheet(
                     rideRequest: rideProvider.currentRideRequest!,
                     onNavigate: _navigateToPickup,
-                    onArrived: () => rideProvider.arriveAtPickup(),
-                    onStartRide: _startRideAndNavigateToDropoff,
-                    onCompleteRide: () => rideProvider.completeRide(),
+                    onArrived: () async {
+                      // ✅ Make async
+                      final authProvider = Provider.of<AuthProvider>(
+                        context,
+                        listen: false,
+                      );
+                      final driverId = authProvider.userId;
+                      final accessToken = await authProvider.getCurrentToken();
+                      if (driverId != null && accessToken != null) {
+                        await rideProvider.arriveAtPickup(
+                          driverId,
+                          accessToken,
+                        );
+                      }
+                    },
+                    onStartRide: () async {
+                      // ✅ Make async
+                      final authProvider = Provider.of<AuthProvider>(
+                        context,
+                        listen: false,
+                      );
+                      final driverId = authProvider.userId;
+                      final accessToken = await authProvider.getCurrentToken();
+                      if (driverId != null && accessToken != null) {
+                        // This local method calls rideProvider.startRide
+                        await _startRideAndNavigateToDropoff(
+                          driverId,
+                          accessToken,
+                        );
+                      }
+                    },
+                    onCompleteRide: () async {
+                      // ✅ Make async
+                      final authProvider = Provider.of<AuthProvider>(
+                        context,
+                        listen: false,
+                      );
+                      final driverId = authProvider.userId;
+                      final accessToken = await authProvider.getCurrentToken();
+                      if (driverId != null && accessToken != null) {
+                        await rideProvider.completeRide(driverId, accessToken);
+                      }
+                    },
                     isEnRouteToPickup:
                         rideProvider.rideStatus == RideStatus.enRouteToPickup,
                     isAtPickup:

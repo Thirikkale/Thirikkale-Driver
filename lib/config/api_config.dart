@@ -94,6 +94,8 @@ class ApiConfig {
   static const String requestRide = '$rideServiceBaseUrl/rides/request';
   static String acceptRide(String rideId) =>
       '$rideServiceBaseUrl/rides/$rideId/accept';
+  static String driverArrived(String rideId) =>
+      '$rideServiceBaseUrl/rides/$rideId/driver-arrived';
   static String startRide(String rideId) =>
       '$rideServiceBaseUrl/rides/$rideId/start';
   static String completeRide(String rideId) =>
