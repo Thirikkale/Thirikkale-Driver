@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:thirikkale_driver/core/provider/auth_provider.dart';
 import 'package:thirikkale_driver/core/services/ride_request_api_service.dart';
 import 'package:thirikkale_driver/core/services/web_socket_service.dart';
 import 'package:thirikkale_driver/features/home/models/ride_request_model.dart';
@@ -19,6 +20,8 @@ class RideProvider extends ChangeNotifier {
   final RideRequestApiService _rideRequestApiService = RideRequestApiService();
   final WebSocketService _webSocketService = WebSocketService();
 
+  AuthProvider? _authProvider;
+
   Stream<RideRequest> get rideRequestStream =>
       _webSocketService.rideRequestStream;
 
@@ -29,6 +32,10 @@ class RideProvider extends ChangeNotifier {
   StreamSubscription<Map<String, dynamic>>? _rideUpdateSubscription;
   StreamSubscription<bool>? _connectionSubscription;
   bool _isConnected = false;
+
+  void update(AuthProvider authProvider) {
+    _authProvider = authProvider;
+  }
 
   // Getters
   RideRequest? get currentRideRequest => _currentRideRequest;
@@ -405,20 +412,103 @@ class RideProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void arriveAtPickup() {
-    _rideStatus = RideStatus.arrivedAtPickup;
-    notifyListeners();
+  Future<void> arriveAtPickup(String driverId, String accessToken) async {
+    if (_currentRideRequest == null) return;
+
+    final accessToken =
+        await _authProvider?.getCurrentToken(); // Fetch fresh token
+    if (accessToken == null) {
+      print("❌ Cannot mark arrived: Missing access token.");
+      _lastAcceptanceError = 'Authentication error. Please login again.';
+      notifyListeners();
+      return;
+    }
+
+    try {
+      final result = await _rideRequestApiService.driverArrived(
+        _currentRideRequest!.rideId,
+        accessToken,
+      );
+
+      if (result['success'] == true) {
+        _rideStatus = RideStatus.arrivedAtPickup;
+        print("✅ Driver marked as arrived on backend");
+        notifyListeners();
+      } else {
+        print("❌ Failed to mark as arrived: ${result['error']}");
+        // Optionally show an error to the driver
+      }
+    } catch (e) {
+      print("❌ API call failed for arriveAtPickup: $e");
+    }
   }
 
-  void startRide() {
-    _rideStatus = RideStatus.rideStarted;
-    notifyListeners();
+  // This method now calls the backend
+  Future<void> startRide(String driverId, String accessToken) async {
+    if (_currentRideRequest == null) return;
+
+    final accessToken =
+        await _authProvider?.getCurrentToken(); // Fetch fresh token
+    if (accessToken == null) {
+      print("❌ Cannot start ride: Missing access token.");
+      _lastAcceptanceError = 'Authentication error. Please login again.';
+      notifyListeners();
+      return;
+    }
+
+    try {
+      final result = await _rideRequestApiService.startRide(
+        _currentRideRequest!.rideId,
+        accessToken,
+      );
+
+      if (result['success'] == true) {
+        _rideStatus = RideStatus.rideStarted;
+        print("▶️ Ride started on backend");
+        notifyListeners();
+      } else {
+        print("❌ Failed to start ride: ${result['error']}");
+      }
+    } catch (e) {
+      print("❌ API call failed for startRide: $e");
+    }
   }
 
-  void completeRide() {
-    _currentRideRequest = null;
-    _rideStatus = RideStatus.idle;
-    notifyListeners();
+  // This method now calls the backend
+  Future<void> completeRide(String driverId, String accessToken) async {
+    if (_currentRideRequest == null) return;
+
+    final accessToken =
+        await _authProvider?.getCurrentToken(); // Fetch fresh token
+    if (accessToken == null) {
+      print("❌ Cannot complete ride: Missing access token.");
+      _lastAcceptanceError = 'Authentication error. Please login again.';
+      notifyListeners();
+      return;
+    }
+
+    try {
+      // Use the fare from the ride request as the "actual fare"
+      // In a real app, you might recalculate this based on actual distance/time
+      final actualFare = _currentRideRequest!.fareAmount;
+
+      final result = await _rideRequestApiService.completeRide(
+        _currentRideRequest!.rideId,
+        accessToken,
+        actualFare,
+      );
+
+      if (result['success'] == true) {
+        _currentRideRequest = null;
+        _rideStatus = RideStatus.idle;
+        print("🏁 Ride completed on backend");
+        notifyListeners();
+      } else {
+        print("❌ Failed to complete ride: ${result['error']}");
+      }
+    } catch (e) {
+      print("❌ API call failed for completeRide: $e");
+    }
   }
 
   @override

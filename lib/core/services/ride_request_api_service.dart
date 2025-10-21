@@ -216,6 +216,99 @@ class RideRequestApiService {
     }
   }
 
+  Future<Map<String, dynamic>> driverArrived(
+    String rideId,
+    String accessToken,
+  ) async {
+    try {
+      print('🚐 Driver has arrived for ride: $rideId');
+      final url = ApiConfig.driverArrived(rideId);
+      final headers = ApiConfig.getJWTHeaders(accessToken);
+
+      final response = await http
+          .post(Uri.parse(url), headers: headers)
+          .timeout(const Duration(seconds: 15));
+
+      print('🚐 Driver arrived response status: ${response.statusCode}');
+      print('🚐 Driver arrived response body: ${response.body}');
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return {'success': true, 'data': jsonDecode(response.body)};
+      } else {
+        return {'success': false, 'error': 'Failed to mark as arrived'};
+      }
+    } catch (e) {
+      print('❌ Error marking as arrived: $e');
+      return {'success': false, 'error': 'Network error: $e'};
+    }
+  }
+
+  // Notify backend that ride has started
+  Future<Map<String, dynamic>> startRide(
+    String rideId,
+    String accessToken,
+  ) async {
+    try {
+      print('▶️ Starting ride: $rideId');
+      final url = ApiConfig.startRide(rideId);
+      final headers = ApiConfig.getJWTHeaders(accessToken);
+
+      final response = await http
+          .post(Uri.parse(url), headers: headers)
+          .timeout(const Duration(seconds: 15));
+
+      print('▶️ Start ride response status: ${response.statusCode}');
+      print('▶️ Start ride response body: ${response.body}');
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return {'success': true, 'data': jsonDecode(response.body)};
+      } else {
+        return {'success': false, 'error': 'Failed to start ride'};
+      }
+    } catch (e) {
+      print('❌ Error starting ride: $e');
+      return {'success': false, 'error': 'Network error: $e'};
+    }
+  }
+
+  // Notify backend that ride is complete
+  Future<Map<String, dynamic>> completeRide(
+    String rideId,
+    String accessToken,
+    double actualFare, // You'll need to pass the final fare
+  ) async {
+    try {
+      print('🏁 Completing ride: $rideId');
+      final url = ApiConfig.completeRide(rideId);
+      final headers = ApiConfig.getJWTHeaders(accessToken);
+
+      // The backend endpoint expects a RideUpdateDto
+      final body = jsonEncode({
+        'rideId': rideId,
+        'actualFare': actualFare,
+        // You can add rating/feedback here later if needed
+        // 'rating': 5,
+        // 'feedback': 'Great rider!'
+      });
+
+      final response = await http
+          .post(Uri.parse(url), headers: headers, body: body)
+          .timeout(const Duration(seconds: 15));
+
+      print('🏁 Complete ride response status: ${response.statusCode}');
+      print('🏁 Complete ride response body: ${response.body}');
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return {'success': true, 'data': jsonDecode(response.body)};
+      } else {
+        return {'success': false, 'error': 'Failed to complete ride'};
+      }
+    } catch (e) {
+      print('❌ Error completing ride: $e');
+      return {'success': false, 'error': 'Network error: $e'};
+    }
+  }
+
   void dispose() {
     stopListeningForRideRequests();
   }

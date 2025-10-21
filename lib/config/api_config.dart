@@ -3,7 +3,7 @@ class ApiConfig {
   // IMPORTANT: Replace 'YOUR_BACKEND_IP' with the actual IP address of your backend device
   // Example: 'http://192.168.1.100:8081/user-service/api/v1'
   static const String baseIp =
-      '10.138.196.69'; // Update this to match your backend IP
+      '172.20.10.2'; // Update this to match your backend IP
 
   // Use baseIp consistently
   static const String userServiceBaseUrl =
@@ -94,6 +94,8 @@ class ApiConfig {
   static const String requestRide = '$rideServiceBaseUrl/rides/request';
   static String acceptRide(String rideId) =>
       '$rideServiceBaseUrl/rides/$rideId/accept';
+  static String driverArrived(String rideId) =>
+      '$rideServiceBaseUrl/rides/$rideId/driver-arrived';
   static String startRide(String rideId) =>
       '$rideServiceBaseUrl/rides/$rideId/start';
   static String completeRide(String rideId) =>
