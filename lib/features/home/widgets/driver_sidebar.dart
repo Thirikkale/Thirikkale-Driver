@@ -156,6 +156,11 @@ class DriverSidebar extends StatelessWidget {
                   onTap: () => _navigateToWallet(context),
                 ),
                 _buildMenuItem(
+                  icon: Icons.schedule,
+                  title: 'Scheduled Rides',
+                  onTap: () => _navigateToScheduledRides(context),
+                ),
+                _buildMenuItem(
                   icon: Icons.directions_car,
                   title: 'Vehicle Details',
                   onTap: () => _navigateToVehicleDetails(context),
@@ -330,6 +335,13 @@ class DriverSidebar extends StatelessWidget {
     Navigator.pop(context);
     // Navigate to ratings screen
     Navigator.pushNamed(context, AppRoutes.reviews);
+  }
+
+  void _navigateToScheduledRides(BuildContext context) {
+    Navigator.pop(context);
+    Future.delayed(const Duration(milliseconds: 200), () {
+      Navigator.pushNamed(context, AppRoutes.scheduledRides);
+    });
   }
 
   void _navigateToSupport(BuildContext context) {

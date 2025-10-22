@@ -3,17 +3,21 @@ class ApiConfig {
   // IMPORTANT: Replace 'YOUR_BACKEND_IP' with the actual IP address of your backend device
   // Example: 'http://192.168.1.100:8081/user-service/api/v1'
   static const String baseIp =
-      '172.20.10.2'; // Update this to match your backend IP
+      '192.168.8.111'; // Update this to match your backend IP
 
   // Use baseIp consistently
   static const String userServiceBaseUrl =
       'http://$baseIp:8081/user-service/api/v1';
   static const String rideServiceBaseUrl =
       'http://$baseIp:8082/ride-service/api/v1';
+  // Scheduling service (for scheduled rides)
+  static const String schedulingServiceBaseUrl =
+      'http://$baseIp:8085/scheduling-service/api';
   static const String webSocketUrl = 'http://$baseIp:8082';
 
   static const String authBaseUrl = '$userServiceBaseUrl/auth';
   static const String driversBaseUrl = '$userServiceBaseUrl/drivers';
+    static const String ridersBaseUrl = '$userServiceBaseUrl/riders';
 
   // Timeout configurations (increased for network latency and document processing)
   static const Duration connectTimeout = Duration(seconds: 45);
@@ -129,6 +133,46 @@ class ApiConfig {
       '$rideServiceBaseUrl/payments/driver/$driverId';
   static String getDriverEarnings(String driverId) =>
       '$rideServiceBaseUrl/payments/driver/$driverId/earnings';
+
+  // Scheduled rides (scheduling-service)
+  static String getNearbyScheduledRides({
+    required double latitude,
+    required double longitude,
+    required double radiusKm,
+  }) =>
+      '$schedulingServiceBaseUrl/scheduled-rides/nearby?latitude=$latitude&longitude=$longitude&radiusKm=$radiusKm';
+
+  // Get accepted rides for a specific driver (no location restriction)
+  static String getDriverAcceptedRides(String driverId) =>
+      '$schedulingServiceBaseUrl/scheduled-rides/driver/$driverId';
+
+  static String getNearbyDropoffRides({
+    required double latitude,
+    required double longitude,
+    required double radiusKm,
+  }) =>
+      '$schedulingServiceBaseUrl/scheduled-rides/nearby-dropoff?latitude=$latitude&longitude=$longitude&radiusKm=$radiusKm';
+
+  static String routeMatch() =>
+      '$schedulingServiceBaseUrl/scheduled-rides/route-match';
+
+  static String assignDriverToScheduledRide({
+    required String rideId,
+    required String driverId,
+  }) =>
+      '$schedulingServiceBaseUrl/scheduled-rides/$rideId/assign-driver/$driverId';
+
+  static String removeDriverFromScheduledRide(String rideId) =>
+      '$schedulingServiceBaseUrl/scheduled-rides/$rideId/remove-driver';
+
+  static String updateScheduledRideStatus(String rideId) =>
+      '$schedulingServiceBaseUrl/scheduled-rides/$rideId/status';
+
+  // Card details (user-service)
+  static String getDriverCard(String driverId) =>
+      '$driversBaseUrl/$driverId/card';
+  static String getRiderCard(String riderId) =>
+      '$ridersBaseUrl/$riderId/card';
 
   // Pub-sub Ride system
   static String subscribeDriver(String driverId) =>
