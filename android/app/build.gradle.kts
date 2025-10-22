@@ -27,7 +27,9 @@ android {
         applicationId = "com.example.thirikkale_driver"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+    // Firebase Auth 24.0.0 requires minSdkVersion >= 23
+    // Use the higher of Flutter's minSdk and 23
+    minSdk = maxOf(flutter.minSdkVersion, 23)
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

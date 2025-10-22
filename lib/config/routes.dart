@@ -12,6 +12,7 @@ import 'package:thirikkale_driver/features/earnings/screens/earnings_overview_sc
 import 'package:thirikkale_driver/features/earnings/screens/earnings_history_screen.dart';
 import 'package:thirikkale_driver/features/earnings/screens/payout_settings_screen.dart';
 import 'package:thirikkale_driver/features/earnings/screens/trips_payment_screen.dart';
+import 'package:thirikkale_driver/features/scheduled_rides/screens/scheduled_rides_screen.dart';
 
 class AppRoutes {
   static const String initial = '/';
@@ -30,6 +31,7 @@ class AppRoutes {
   static const String earningsAnalytics = '/earnings-analytics';
   static const String trips = '/trips';
   static const String tripPayment = '/trip-payment';
+  static const String scheduledRides = '/scheduled-rides';
 
   static Map<String, WidgetBuilder> getRoutes() {
     return {
@@ -47,6 +49,7 @@ class AppRoutes {
       payoutSettings: (context) => const PayoutSettingsScreen(),
       trips: (context) => const TripsPaymentScreen(),
       tripPayment: (context) => const TripsPaymentScreen(),
+      scheduledRides: (context) => const ScheduledRidesScreen(),
     };
   }
 }
